@@ -13,6 +13,10 @@ class CollaborativeWorkspace():
             self.workspace = Workspace(contains = [])
             self.sem_obj_interface = SemanticObjectInterface(onto)
 
+    def print_status(self):
+        print("The workspace contains: ")
+        for x in self.workspace.contains:
+            print("- {}".format(x))
 
     def add_object(self, name):
         object = self.sem_obj_interface.create(name)

@@ -1,5 +1,5 @@
-from .condition import *
-from . import condition, operator, robot, workspace, object
+from owlready2 import *
+from . import condition, operator, robot, workspace
 import copy
 
 
@@ -17,26 +17,27 @@ class DigitalWorld():
             self.workspace = copy.copy(original_world.workspace)
         else:
             self.world = World()
-            self.world.get_ontology(host + "/uploads/models/handover.owl").load()
-            self.world['http://onto-server-tuni.herokuapp.com/Panda#Robot']()
-            with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
-                self.robot = robot.Robot()
-                self.workspace = workspace.CollaborativeWorkspace(self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#'])
-        self.root_task = list(root_task) if root_task else [self.world['http://onto-server-tuni.herokuapp.com/Panda#Be']]
-
+            self.onto = self.world.get_ontology(host + "/uploads/models/handover.owl").load()
+            self.robot = robot.CollaborativeRobot(self.onto)
+            self.workspace = workspace.CollaborativeWorkspace(self.onto)
+        self.root_task = list(root_task) if root_task else [self.onto.Be]
 
     def create_instance(self, class_name):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
+        with self.onto:
             return self.world['http://onto-server-tuni.herokuapp.com/Panda#'+ class_name]()
 
     def add_object(self, name):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
+        with self.onto:
             obj = self.workspace.add_object(name)
-            sync_reasoner(infer_property_values = True)
+            #close_world(obj)
             return obj
 
+    def sync_reasoner(self):
+        with self.onto:
+            sync_reasoner(self.world)
+
     def add_object_by_name(self, name):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
+        with self.onto:
             objects = self.world.search(is_a = self.world['http://onto-server-tuni.herokuapp.com/Panda#Object'])
             for object in objects:
                 if object.is_called == name:
@@ -79,8 +80,6 @@ class DigitalWorld():
 
     def check_state(self, state):
         result = False
-        print("state")
-        print(state)
         if not state == False:
             with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
                 c = getattr(condition, state.name)

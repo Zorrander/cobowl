@@ -1,26 +1,34 @@
 from owlready2 import *
 
 
-class Robot(Thing):
-    def move(self):
-        pass
 
-    def reach(self):
-        self.isCapableOfReaching = True
+class CollaborativeRobot():
 
-    def open_gripper(self):
-        self.isHoldingSomething = False
-        if self.isWaitingForSomething:
-            self.isWaitingForSomething = False
+    def __init__(self, onto):
+        with onto:
+            class Robot(Thing):
 
-    def close_gripper(self):
-        self.isHoldingSomething = True
+                def move(self):
+                    pass
 
-    def wait_for(self):
-        self.isWaitingForSomething = True
+                def reach(self):
+                    self.isCapableOfReaching = True
 
-    def print_status(self):
-        meta = ['namespace', 'storid']
-        for key in self.__dict__:
-            if not key in meta:
-                print("{} - {}".format(key, self.__dict__[key]))
+                def open_gripper(self):
+                    self.isHoldingSomething = False
+                    if self.isWaitingForSomething:
+                        self.isWaitingForSomething = False
+
+                def close_gripper(self):
+                    self.isHoldingSomething = True
+
+                def wait_for(self):
+                    self.isWaitingForSomething = True
+
+                def print_status(self):
+                    meta = ['namespace', 'storid']
+                    for key in self.__dict__:
+                        if not key in meta:
+                            print("{} - {}".format(key, self.__dict__[key]))
+
+            self.robot = Robot()

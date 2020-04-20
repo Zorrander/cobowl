@@ -3,7 +3,6 @@ from .feature import *
 
 class SemanticObjectInterface():
 
-
     def __init__(self, onto):
         with onto:
 
@@ -15,6 +14,8 @@ class SemanticObjectInterface():
                 def _get_object(self, type):
                     if type == "box":
                         return self._create_box
+                    elif type == "peg":
+                        return self._create_peg
                     else:
                         raise ValueError(type)
 
@@ -23,13 +24,26 @@ class SemanticObjectInterface():
                     box.load_features(feature_interface)
                     return box
 
+                def _create_peg(self, feature_interface):
+                    peg = Peg(has_feature = [])
+                    peg.load_features(feature_interface)
+                    return peg
+
+            class Container(Object):
+                contains = []
+
+                def add(self, object):
+                    self.contains.append(object)
+
             class Box(Object):
                 def load_features(self, feature_interface):
                     self.has_feature.append(feature_interface.create("hollow_space", "rectangular"))
+                    self.has_feature.append(feature_interface.create("boundaries", "rectangular"))
 
-            class Container(Thing):
-                equivalent_to = [Box]
-                
+            class Peg(Object):
+                def load_features(self, feature_interface):
+                    self.has_feature.append(feature_interface.create("head", "rectangular"))
+
             self.object = Object()
             self.feature_interface = SemanticFeatureInterface(onto)
 
