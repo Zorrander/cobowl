@@ -1,23 +1,30 @@
 from owlready2 import *
 from . import state, robot, workspace
 import copy
+from pathlib import Path
 
 class DigitalWorld():
 
     def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
-        self.world = World()
-        self.onto = self.world.get_ontology(host + "/uploads/models/handover.owl").load()
+        if original_world:
+            self.world = World()
+            self.onto = self.world.get_ontology("file://" + str(Path.home() / 'test')).load()
+        else:
+            print("initializing")
+            self.world = World()
+            self.onto = self.world.get_ontology(host + "/uploads/models/handover.owl").load()
         self.robot = robot.CollaborativeRobot(self.onto)
         self.workspace = workspace.CollaborativeWorkspace(self.onto)
         self.state_interface = state.StateInterface(self.onto)
         self.root_task = list(root_task) if root_task else [self.onto.Be()]
 
-    def clone(self):
-        return copy.deepcopy(self)
-        
     def create_instance(self, class_name):
         with self.onto:
             return self.world['http://onto-server-tuni.herokuapp.com/Panda#'+ class_name]()
+
+    def clone(self):
+        self.onto.save(file = str(Path.home() / 'test'), format = "rdfxml")
+        return DigitalWorld(original_world=True)
 
     def add_object(self, name):
         with self.onto:
