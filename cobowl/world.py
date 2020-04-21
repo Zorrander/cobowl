@@ -1,27 +1,20 @@
 from owlready2 import *
-from . import condition, operator, robot, workspace
+from . import state, robot, workspace
 import copy
-
-
-class DispatchingError(Exception):
-   def __init__(self, primitive):
-      self.primitive = primitive
-
 
 class DigitalWorld():
 
     def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
-        if original_world:
-            self.world = copy.copy(original_world.world)
-            self.robot = copy.copy(original_world.robot)
-            self.workspace = copy.copy(original_world.workspace)
-        else:
-            self.world = World()
-            self.onto = self.world.get_ontology(host + "/uploads/models/handover.owl").load()
-            self.robot = robot.CollaborativeRobot(self.onto)
-            self.workspace = workspace.CollaborativeWorkspace(self.onto)
-        self.root_task = list(root_task) if root_task else [self.onto.Be]
+        self.world = World()
+        self.onto = self.world.get_ontology(host + "/uploads/models/handover.owl").load()
+        self.robot = robot.CollaborativeRobot(self.onto)
+        self.workspace = workspace.CollaborativeWorkspace(self.onto)
+        self.state_interface = state.StateInterface(self.onto)
+        self.root_task = list(root_task) if root_task else [self.onto.Be()]
 
+    def clone(self):
+        return copy.deepcopy(self)
+        
     def create_instance(self, class_name):
         with self.onto:
             return self.world['http://onto-server-tuni.herokuapp.com/Panda#'+ class_name]()
@@ -29,16 +22,18 @@ class DigitalWorld():
     def add_object(self, name):
         with self.onto:
             obj = self.workspace.add_object(name)
-            #close_world(obj)
             return obj
 
     def sync_reasoner(self):
-        with self.onto:
-            sync_reasoner(self.world)
+        try:
+            with self.onto:
+                sync_reasoner(self.world, debug = True)
+        except OwlReadyInconsistentOntologyError:
+            print("The ontology is inconsistent")
 
     def add_object_by_name(self, name):
         with self.onto:
-            objects = self.world.search(is_a = self.world['http://onto-server-tuni.herokuapp.com/Panda#Object'])
+            objects = self.world.search(is_a = self.onto.Object)
             for object in objects:
                 if object.is_called == name:
                     self.workspace.contains.append(object())
@@ -47,28 +42,75 @@ class DigitalWorld():
         return self.workspace.is_empty()
 
     def send_command(self, command, target=None):
-        cmd = self.world['http://onto-server-tuni.herokuapp.com/Panda#Command']()
-        cmd.has_action = command
-        if target:
-            cmd.has_target = target
+        with self.onto:
+            cmd = self.onto.Command()
+            cmd.has_action = command
+            if target:
+                cmd.has_target = target
 
     def find_type(self, task):
-        result = "CompoundTask"
-        for type in task.is_a:
-            if "_name" in type.__dict__ and "PrimitiveTask" == type._name:
-                result = "PrimitiveTask"
-                break
-        return result
+        instance_of = task.is_a[0]
+        print(instance_of)
+        parent = self.onto.get_parents_of(instance_of)[0].name
+        print(parent)
+        return (instance_of, parent)
+
+    def anchor(self, result):
+        print("Concrete method: {}".format(result))
+        with self.onto:
+            method = result()
+            if result.name == "CommandMethod":
+                print("Concrete cmd: {}".format(result))
+                cmd = self.onto.search_one(type = self.onto.Command)
+                print("received_command({})".format(cmd.__dict__))
+                if cmd.has_action=="give":
+                    task = self.onto.HandoverTask()
+                if cmd.has_action=="pack":
+                    task = self.onto.PackingTask()
+                elif cmd.has_action=="clean":
+                    task = self.onto.PackagingTask()
+                elif cmd.has_action=="release":
+                    task = self.onto.ReleaseTask()
+                elif cmd.has_action=="grasp":
+                    task = self.onto.GraspTask()
+                elif cmd.has_action=="reach":
+                    print("will reach")
+                    task = self.onto.ReachTask()
+                elif cmd.has_action=="pick":
+                    task = self.onto.PickTask()
+                method.hasSubtask.append(task)
+                destroy_entity(cmd)
+                objects = self.onto.search(type = self.onto.Object)
+                print("Known objects are {}".format(objects))
+                if cmd.has_target:
+                    print("anchoring {}".format(cmd.has_target))
+                    anchored = []
+                    for object in objects:
+                        if cmd.has_target in object.is_called:
+                            anchored.append(object)
+                    if anchored:
+                        method.actsOn.append(anchored[0])
+                        task.actsOn.append(anchored[0])
+                    else:
+                        #raise AnchoringError(cmd.has_target)
+                        return False
+            else:
+                print(result.hasSubtask)
+                method.hasSubtask = [task() for task in result.hasSubtask]
+            return method
 
     def find_satisfied_method(self, current_task):
-        satisfied_methods = []
+        satisfied_methods = set()
         for method in current_task.hasMethod:
+            print("hasMethod {}".format(method))
             if self.are_preconditions_met(method):
-                satisfied_methods.append(method)
+                print("preconditions are met")
+                satisfied_methods.add(method)
         if satisfied_methods:
             return self.has_highest_priority(satisfied_methods)
 
     def has_highest_priority(self, methods):
+        print("possible methods: {}".format(methods))
         max_prio = 100
         result = "cogrob:temp"
         for method in methods:
@@ -76,40 +118,29 @@ class DigitalWorld():
             if priority < max_prio:
                 result = method
                 max_prio = priority
-        return result
-
-    def check_state(self, state):
-        result = False
-        if not state == False:
-            with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
-                c = getattr(condition, state.name)
-                if c().evaluate(self.world, self.robot, self.workspace):
-                    result = True
-        return result
+        return self.anchor(result)
 
     def are_preconditions_met(self, primitive):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
-            if len(primitive.INDIRECT_hasCondition) == 0:
-                return True
-            else:
+        with self.onto:
+            result = True
+            if len(primitive.INDIRECT_hasCondition) > 0:
                 for conditions in primitive.INDIRECT_hasCondition:
-                    c = getattr(condition, conditions.name)
-                    if c().evaluate(self.world, self.robot, self.workspace):
-                            return True
-            return False
+                    if not self.state_interface.evaluate(conditions.name):
+                        result = False
+                        break
+            return result
 
     def are_effects_satisfied(self, task):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
-            result = False
+        with self.onto:
+            result = True
             for effects in task.INDIRECT_hasEffect:
-                e = getattr(condition, effects.name)
-                if e().evaluate(self.world, self.robot, self.workspace):
-                    print("{} already satisfied".format(effects))
-                    result = True
+                if not self.state_interface.evaluate(effects.name):
+                    result = False
+                    break
             return result
 
     def resolve_conflicts(self, diff_vector):
-        with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
+        with self.onto:
             if diff_vector[0] > 0:
                 task0 = self.world['http://onto-server-tuni.herokuapp.com/Panda#PickTask']
                 task1 = self.world['http://onto-server-tuni.herokuapp.com/Panda#PlaceTask']
@@ -119,12 +150,14 @@ class DigitalWorld():
                 return tasks
 
     def find_subtasks(self, method):
+        print("find_subtasks({})".format(method))
         return method.hasSubtask
 
     def apply_effects(self, primitive):
         try:
-            with self.world.ontologies['http://onto-server-tuni.herokuapp.com/Panda#']:
-                op = getattr(operator, primitive.INDIRECT_useOperator[0].name)
-                op().run(self.world, primitive, self.robot)
-        except:
-            raise DispatchingError(primitive)
+            with self.onto:
+                self.robot.perform(primitive)
+                #op = getattr(operator, primitive.INDIRECT_useOperator[0].name)
+                #op().run(self.world, primitive, self.robot)
+        except Exception as e:
+            print(e)

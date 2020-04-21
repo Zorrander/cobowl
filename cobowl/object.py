@@ -1,5 +1,6 @@
 from owlready2 import *
 from .feature import *
+from .state import *
 
 class SemanticObjectInterface():
 
@@ -20,7 +21,7 @@ class SemanticObjectInterface():
                         raise ValueError(type)
 
                 def _create_box(self, feature_interface):
-                    box = Box(has_feature = [])
+                    box = Box(has_feature = [], is_called = ["box"])
                     box.load_features(feature_interface)
                     return box
 
@@ -30,8 +31,6 @@ class SemanticObjectInterface():
                     return peg
 
             class Container(Object):
-                contains = []
-
                 def add(self, object):
                     self.contains.append(object)
 
@@ -46,6 +45,7 @@ class SemanticObjectInterface():
 
             self.object = Object()
             self.feature_interface = SemanticFeatureInterface(onto)
+            self.state_interface = StateInterface(onto)
 
     def create(self, type):
         return self.object.create(type, self.feature_interface)

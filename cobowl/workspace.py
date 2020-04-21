@@ -1,5 +1,6 @@
 from owlready2 import *
 from .object import *
+from .state import *
 
 class CollaborativeWorkspace():
 
@@ -12,6 +13,7 @@ class CollaborativeWorkspace():
 
             self.workspace = Workspace(contains = [])
             self.sem_obj_interface = SemanticObjectInterface(onto)
+            self.state_interface = StateInterface(onto)
 
     def print_status(self):
         print("The workspace contains: ")
