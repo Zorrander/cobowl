@@ -8,7 +8,7 @@ class DigitalWorld():
     def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
         if original_world:
             self.world = World()
-            self.onto = self.world.get_ontology("file://" + str(Path.home() / 'test')).load()
+            self.onto = self.world.get_ontology( str(Path.home() / 'plan')).load()
         else:
             print("initializing")
             self.world = World()
@@ -22,8 +22,13 @@ class DigitalWorld():
         with self.onto:
             return self.world['http://onto-server-tuni.herokuapp.com/Panda#'+ class_name]()
 
+    def dismiss_command(self):
+        cmd = self.onto.search_one(type = self.onto.Command)
+        if cmd:
+            destroy_entity(cmd)
+
     def clone(self):
-        self.onto.save(file = str(Path.home() / 'test'), format = "rdfxml")
+        self.onto.save(file = str(Path.home() / 'plan'), format = "rdfxml")
         return DigitalWorld(original_world=True)
 
     def add_object(self, name):
@@ -52,6 +57,7 @@ class DigitalWorld():
         with self.onto:
             cmd = self.onto.Command()
             cmd.has_action = command
+            print("register  {}".format(cmd.__dict__))
             if target:
                 cmd.has_target = target
 
@@ -67,26 +73,27 @@ class DigitalWorld():
         with self.onto:
             method = result()
             if result.name == "CommandMethod":
-                print("Concrete cmd: {}".format(result))
                 cmd = self.onto.search_one(type = self.onto.Command)
-                print("received_command({})".format(cmd.__dict__))
                 if cmd.has_action=="give":
+                    print("received_give_command({})".format(cmd.__dict__))
                     task = self.onto.HandoverTask()
-                if cmd.has_action=="pack":
+                elif cmd.has_action=="pack":
+                    print("received_pack_command({})".format(cmd.__dict__))
                     task = self.onto.PackingTask()
-                elif cmd.has_action=="clean":
-                    task = self.onto.PackagingTask()
                 elif cmd.has_action=="release":
+                    print("received_grelease_command({})".format(cmd.__dict__))
                     task = self.onto.ReleaseTask()
                 elif cmd.has_action=="grasp":
+                    print("received_grasp_command({})".format(cmd.__dict__))
                     task = self.onto.GraspTask()
                 elif cmd.has_action=="reach":
-                    print("will reach")
+                    print("received_reach_command({})".format(cmd.__dict__))
                     task = self.onto.ReachTask()
                 elif cmd.has_action=="pick":
+                    print("received_pick_command({})".format(cmd.__dict__))
                     task = self.onto.PickTask()
-                method.hasSubtask.append(task)
-                destroy_entity(cmd)
+                else:
+                    raise ValueError(cmd.has_action)
                 objects = self.onto.search(type = self.onto.Object)
                 print("Known objects are {}".format(objects))
                 if cmd.has_target:
@@ -101,6 +108,10 @@ class DigitalWorld():
                     else:
                         #raise AnchoringError(cmd.has_target)
                         return False
+                if not self.are_preconditions_met(task):
+                    print("CANNOT SATISFY COMMAND")
+                    task = self.onto.IdleTask()
+                method.hasSubtask.append(task)
             else:
                 print(result.hasSubtask)
                 method.hasSubtask = [task() for task in result.hasSubtask]
@@ -128,6 +139,7 @@ class DigitalWorld():
         return self.anchor(result)
 
     def are_preconditions_met(self, primitive):
+        print("are_preconditions_met {}".format(primitive))
         with self.onto:
             result = True
             if len(primitive.INDIRECT_hasCondition) > 0:

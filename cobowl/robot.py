@@ -8,7 +8,7 @@ class CollaborativeRobot():
         with onto:
             class Robot(Thing):
                 def perform(self, primitive):
-                    operator = self._get_operator(primitive.name)
+                    operator = self._get_operator(primitive.is_a[0].name)
                     return operator()
 
                 def _get_operator(self, primitive):
