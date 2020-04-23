@@ -3,22 +3,10 @@ from .object import *
 from .state import *
 
 class CollaborativeWorkspace():
-
     def __init__(self, onto):
-        with onto:
-            class Workspace(Thing):
-
-                def is_empty(self):
-                    return False if len(self.contains) > 0 else True
-
-            self.workspace = Workspace(contains = [])
-            self.sem_obj_interface = SemanticObjectInterface(onto)
-            self.state_interface = StateInterface(onto)
-
-    def print_status(self):
-        print("The workspace contains: ")
-        for x in self.workspace.contains:
-            print("- {}".format(x))
+        self.onto = onto
+        self.workspace = onto.cobot_workspace
+        self.sem_obj_interface = SemanticObjectInterface(onto)
 
     def add_object(self, name):
         object = self.sem_obj_interface.create(name)
