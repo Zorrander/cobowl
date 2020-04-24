@@ -52,7 +52,8 @@ class DigitalWorld():
             cmd = self.onto.Command()
             cmd.has_action = command
             if target:
-                cmd.has_target = target
+                list_target = target if type(target) is list else [target]
+                cmd.has_target.extend(list_target)
 
     def find_type(self, task):
         return self.onto.get_parents_of(task.is_a[0])[0].name

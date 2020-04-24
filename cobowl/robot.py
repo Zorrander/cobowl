@@ -31,6 +31,8 @@ class CollaborativeRobot():
                 self.robot.isWaitingForSomething = False
         elif primitive_type == "TranslationTask":
             return self._use_move_operator(primitive.has_place_goal)
+        elif primitive_type == "AligningTask":
+            return self._use_move_operator(primitive.has_place_goal)
         else:
             raise ValueError(type)
 

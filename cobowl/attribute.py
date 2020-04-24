@@ -44,14 +44,19 @@ class SemanticAttributeInterface(Thing):
                 def _get_shape(self, type):
                     if type == "rectangular":
                         return self._make_rectangular
+                    elif type == "round":
+                        return self._make_round
                     else:
                         raise ValueError(type)
 
                 def _make_rectangular(self):
                     return Rectangular()
 
-            class Rectangular(Shape):pass
+                def _make_round(self):
+                    return Round()
 
+            class Rectangular(Shape):pass
+            class Round(Shape):pass
             class Color(Attribute):
                 pass
 
