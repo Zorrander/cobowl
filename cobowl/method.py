@@ -23,6 +23,10 @@ class MethodInterface():
             task = self.onto.HandoverTask()
         elif cmd.has_action=="pack":
             task = self.onto.PackingTask()
+            target_goal = self.onto.search_one(type = self.onto.Container)
+            print("found container for packing task")
+            print(target_goal)
+            task.has_place_goal = target_goal
         elif cmd.has_action=="release":
             task = self.onto.ReleaseTask()
         elif cmd.has_action=="grasp":
@@ -49,9 +53,14 @@ class MethodInterface():
         #    print("CANNOT SATISFY COMMAND")
         #    task = self.onto.IdleTask()
         method.hasSubtask.append(task)
-        return method
+        return method.hasSubtask
 
     def _create_normal_method(self, type, current_task):
+        properties = ['actsOn', 'has_place_goal']
         method = self.onto[type.name]()
         method.hasSubtask = [self.onto[task.name]() for task in type.hasSubtask]
-        return method
+        for task in method.hasSubtask:
+            task.actsOn = current_task.actsOn
+            if current_task.has_place_goal:
+                task.has_place_goal = current_task.has_place_goal
+        return method.hasSubtask

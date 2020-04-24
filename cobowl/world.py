@@ -55,10 +55,10 @@ class DigitalWorld():
                 cmd.has_target = target
 
     def find_type(self, task):
-        return (task.is_a[0], self.onto.get_parents_of(task.is_a[0])[0].name)
+        return self.onto.get_parents_of(task.is_a[0])[0].name
 
     def find_satisfied_method(self, current_task):
-        method = self.has_highest_priority([method for method in current_task.hasMethod if self.are_preconditions_met(method)])
+        method = self.has_highest_priority([method for method in current_task.is_a[0].hasMethod if self.are_preconditions_met(method)])
         return self.method_interface.create(method, current_task)
 
     def has_highest_priority(self, methods):
@@ -81,10 +81,10 @@ class DigitalWorld():
         return result
 
     def are_preconditions_met(self, primitive):
-        return self.check_state(primitive.INDIRECT_hasCondition)
+        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition)
 
     def are_effects_satisfied(self, task):
-        return self.check_state(task.INDIRECT_hasEffect)
+        return self.check_state(task.is_a[0].INDIRECT_hasEffect)
 
     def find_subtasks(self, method):
         return method.hasSubtask
