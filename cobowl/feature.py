@@ -6,7 +6,7 @@ class SemanticFeatureInterface(Thing):
     def __init__(self, onto):
         with onto:
             class has_feature(ObjectProperty): pass
-            
+
             class Feature(Thing):
 
                 def create_feature(self, type, attribute_interface, value=None):

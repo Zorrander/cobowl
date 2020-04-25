@@ -12,6 +12,8 @@ class StateInterface():
     def _get_state(self, state):
         if state == "ReceivedCommand":
             return self._has_received_command
+        elif state == "IsAligned":
+            return self._is_aligned
         elif state == "IsNotHoldingSomething":
             return self._is_not_holding_something
         elif state == "IsWaitingForSomething":
@@ -31,6 +33,9 @@ class StateInterface():
 
     def _has_received_command(self):
         return True if self.onto.search_one(type = self.onto.Command) else False
+
+    def _is_aligned(self):
+        return self.onto.panda.isAligned
 
     def _is_waiting_for_something(self):
         return self.onto.panda.isWaitingForSomething

@@ -9,8 +9,27 @@ class SemanticObjectInterface():
         self.feature_interface = SemanticFeatureInterface(onto)
         with onto:
             class Object(Thing):
-                    def match(self):
-                        print("matching")
+                    def match(self, candidates):
+                        print("matching {} -- {}".format(self.name, candidates))
+                        valid = list()
+                        for c in candidates:
+                            if self.has_compatible_profile(c):
+                                valid.append(c)
+                                break
+                        return valid
+
+                    def has_compatible_profile(self, object):
+                        features = [f.is_a[0].name for f in self.has_feature]
+                        features2 = [f.is_a[0].name for f in object.has_feature]
+                        print("has_compatible_profile")
+                        print(features)
+                        print(features2)
+                        if "Hole" in features and "Head" in features2:
+                            return True
+                        elif "Hole" in features2 and "Head" in features:
+                            return True
+                        else:
+                            return False
 
     def create(self, type):
         product = self._get_object(type)

@@ -24,6 +24,10 @@ class CollaborativeRobot():
         elif primitive_type == "ReachTask":
             self.robot.isCapableOfReaching = True
             return self._use_move_operator(primitive.actsOn)
+        elif primitive_type == "InsertingTask":
+            self.robot.isAligned = False
+            print("inserting")
+            return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "ReleaseTask":
             self.robot.isHoldingSomething = False
             return self._use_open_operator()
@@ -32,6 +36,7 @@ class CollaborativeRobot():
         elif primitive_type == "TranslationTask":
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "AligningTask":
+            self.robot.isAligned = True
             return self._use_move_operator(primitive.has_place_goal)
         else:
             raise ValueError(type)
