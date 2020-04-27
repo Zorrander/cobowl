@@ -19,7 +19,6 @@ class MethodInterface():
         return anchored
 
     def match_objects(self, assembly_set, anchored_objects, list_pairs):
-        print(anchored_objects)
         if anchored_objects:
             current_obj = anchored_objects.pop(0)
             match = current_obj.match(assembly_set)
@@ -49,7 +48,7 @@ class MethodInterface():
             target_goal = self.onto.search_one(type = self.onto.Container)
             print("found container for packing task")
             print(target_goal)
-            task.has_place_goal = target_goal
+            task.has_place_goal.append(target_goal)
             method.hasSubtask.append(task)
         elif cmd.has_action=="release":
             task = self.onto.ReleaseTask()
@@ -69,18 +68,16 @@ class MethodInterface():
             method.hasSubtask.append(task)
         elif cmd.has_action=="assemble":
             pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])
-            print("list_pairs")
-            print(pairs)
             for pair in pairs:
                 for comp in pairs:
                     if pair[0] in comp and pair[1] in comp:
                         pairs.remove(pair)
-            print("pruned_pairs")
-            print(pairs)
             for pair in pairs:
                 task = self.onto.AssemblyTask()
                 task.actsOn.append(pair[0])
-                task.actsOn.extend(pair[1])
+
+                print(pair)
+                task.has_place_goal.extend(pair[1])
                 method.hasSubtask.append(task)
         else:
             raise ValueError(cmd.has_action)
@@ -96,7 +93,8 @@ class MethodInterface():
                 new_instance=self.onto[task.name]()
                 new_instance.actsOn.append(target)
                 if current_task.has_place_goal:
+                    print("propagate")
+                    print(method.hasSubtask)
                     task.has_place_goal = current_task.has_place_goal
-                print(new_instance.__dict__)
                 method.hasSubtask.append(new_instance)
         return method.hasSubtask

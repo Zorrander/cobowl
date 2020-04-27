@@ -26,7 +26,6 @@ class CollaborativeRobot():
             return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "InsertingTask":
             self.robot.isAligned = False
-            print("inserting")
             return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "ReleaseTask":
             self.robot.isHoldingSomething = False

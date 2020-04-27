@@ -35,7 +35,7 @@ class StateInterface():
         return True if self.onto.search_one(type = self.onto.Command) else False
 
     def _is_aligned(self):
-        return self.onto.panda.isAligned
+        return self.onto.panda.is_aligned
 
     def _is_waiting_for_something(self):
         return self.onto.panda.isWaitingForSomething
