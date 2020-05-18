@@ -5,8 +5,8 @@ from pathlib import Path
 import os
 
 class DigitalWorld():
-
-    def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
+    #def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
+    def __init__(self, original_world=None, root_task=None, host="http://127.0.0.1:5000"):
         self.world = World()
         self.onto = self.world.get_ontology(str(Path.home()/'cobot_logs'/'plan.owl')).load() if original_world else self.world.get_ontology(host + "/uploads/models/handover.owl").load()
         if original_world:
@@ -89,7 +89,7 @@ class DigitalWorld():
 
     def find_subtasks(self, method):
         return method.hasSubtask
-
+        
     def apply_effects(self, primitive):
         with self.onto:
             self.robot.perform(primitive)

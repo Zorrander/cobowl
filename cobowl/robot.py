@@ -6,7 +6,6 @@ class CollaborativeRobot():
 
     def __init__(self, onto):
         self.onto = onto
-        self.robot = onto.panda
 
     def perform(self, primitive):
         operator = self._get_operator(primitive.is_a[0].name, primitive)
@@ -16,26 +15,26 @@ class CollaborativeRobot():
         if primitive_type == "IdleTask":
             return self._use_idle_operator()
         elif primitive_type == "WaitForTask":
-            self.robot.isWaitingForSomething = True
+            self.onto.panda.isWaitingForSomething = True
             return self._use_idle_operator()
         elif primitive_type == "GraspTask":
-            self.robot.isHoldingSomething = True
+            self.onto.panda.isHoldingSomething = True
             return self._use_close_operator(primitive.actsOn)
         elif primitive_type == "ReachTask":
-            self.robot.isCapableOfReaching = True
+            self.onto.panda.isCapableOfReaching = True
             return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "InsertingTask":
-            self.robot.isAligned = False
+            self.onto.panda.isAligned = False
             return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "ReleaseTask":
-            self.robot.isHoldingSomething = False
+            self.onto.panda.isHoldingSomething = False
             return self._use_open_operator()
-            if self.robot.isWaitingForSomething:
-                self.robot.isWaitingForSomething = False
+            if self.onto.panda.isWaitingForSomething:
+                self.onto.panda.isWaitingForSomething = False
         elif primitive_type == "TranslationTask":
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "AligningTask":
-            self.robot.isAligned = True
+            self.onto.panda.isAligned = True
             return self._use_move_operator(primitive.has_place_goal)
         else:
             raise ValueError(type)

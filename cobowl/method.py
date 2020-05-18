@@ -33,11 +33,14 @@ class MethodInterface():
             return self._create_normal_method
 
     def _create_cmd_method(self, type, current_task):
+        print("_create_cmd_method")
+        print(current_task)
         method = self.onto.CommandMethod()
         cmd = self.onto.search_one(type = self.onto.Command)
         robot = self.onto.search_one(type = self.onto.Robot)
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
+        print(cmd.has_action)
         if cmd.has_action=="give":
             task = self.onto.HandoverTask()
             task.actsOn.extend(anchored_objects)
@@ -80,6 +83,7 @@ class MethodInterface():
                 task.has_place_goal.extend(pair[1])
                 method.hasSubtask.append(task)
         else:
+            print("Error")
             raise ValueError(cmd.has_action)
         return method.hasSubtask
 
