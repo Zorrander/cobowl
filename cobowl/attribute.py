@@ -24,8 +24,14 @@ class SemanticAttributeInterface(Thing):
             raise ValueError(type)
 
     def _attach_size(self, value):
-        size = Size()
-        return size.create_size(size.compute(value))
+        size = self.onto.Size()
+        if value == "rectangular":
+            return self._make_rectangular
+        elif value == "round":
+            return self._make_round
+        else:
+            raise ValueError(value)
+        #return size.create_size(size.compute(value))
 
     def _attach_shape(self, value):
         if value == "rectangular":
