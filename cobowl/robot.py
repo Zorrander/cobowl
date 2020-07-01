@@ -8,12 +8,23 @@ class CollaborativeRobot():
         self.onto = onto
 
     def perform(self, primitive):
+        print("Robot Operator ==> {}".format(primitive))
         operator = self._get_operator(primitive.is_a[0].name, primitive)
         operator()
 
     def _get_operator(self, primitive_type, primitive):
         if primitive_type == "IdleTask":
             return self._use_idle_operator()
+        elif primitive_type == "ResetTask":
+            self.onto.panda.isWaitingForSomething = True
+            return self._use_reset_operator()
+        elif primitive_type == "StopTask":
+            self.onto.panda.isWaitingForSomething = True
+            return self._use_stop_operator()
+        elif primitive_type == "LiftingTask":
+            return self._use_move_operator(primitive.has_place_goal)
+        elif primitive_type == "DropingTask":
+            return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "WaitForTask":
             self.onto.panda.isWaitingForSomething = True
             return self._use_idle_operator()
@@ -41,7 +52,6 @@ class CollaborativeRobot():
 
     def _use_move_operator(self, target):
         def move_to():
-            #self.sem_controller.interpret(primitive)
             print("Moving to {}...".format(target))
         return move_to
 
@@ -59,3 +69,13 @@ class CollaborativeRobot():
         def wait():
             print("Waiting...")
         return wait
+
+    def _use_stop_operator(self):
+        def stop():
+            print("Stopping...")
+        return stop
+
+    def _use_reset_operator(self):
+        def reset():
+            print("Reseting...")
+        return reset

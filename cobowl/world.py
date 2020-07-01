@@ -66,7 +66,7 @@ class DigitalWorld():
         max_prio = 100
         result = "cogrob:temp"
         for method in methods:
-            priority = method.hasPriority
+            priority = method.INDIRECT_hasPriority
             if priority < max_prio:
                 result = method
                 max_prio = priority

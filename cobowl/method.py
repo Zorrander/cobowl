@@ -33,17 +33,22 @@ class MethodInterface():
             return self._create_normal_method
 
     def _create_cmd_method(self, type, current_task):
-        print("_create_cmd_method")
-        print(current_task)
         method = self.onto.CommandMethod()
         cmd = self.onto.search_one(type = self.onto.Command)
         robot = self.onto.search_one(type = self.onto.Robot)
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
-        print(cmd.has_action)
-        if cmd.has_action=="give":
+        if cmd.has_action=="give" or cmd.has_action=="take":
             task = self.onto.HandoverTask()
             task.actsOn.extend(anchored_objects)
+            method.hasSubtask.append(task)
+        elif cmd.has_action=="lift":
+            task = self.onto.LiftingTask()
+            task.has_place_goal.extend([self.onto.handover])
+            method.hasSubtask.append(task)
+        elif cmd.has_action=="drop":
+            task = self.onto.DropingTask()
+            task.has_place_goal.extend([self.onto.storage])
             method.hasSubtask.append(task)
         elif cmd.has_action=="pack":
             task = self.onto.PackingTask()
@@ -65,8 +70,18 @@ class MethodInterface():
             task = self.onto.ReachTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+        elif cmd.has_action=="stop":
+            task = self.onto.StopTask()
+            method.hasSubtask.append(task)
+        elif cmd.has_action=="reset":
+            task = self.onto.ResetTask()
+            method.hasSubtask.append(task)
         elif cmd.has_action=="pick":
             task = self.onto.PickTask()
+            task.actsOn.extend(anchored_objects)
+            method.hasSubtask.append(task)
+        elif cmd.has_action=="place":
+            task = self.onto.PlaceTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
         elif cmd.has_action=="assemble":
@@ -78,8 +93,6 @@ class MethodInterface():
             for pair in pairs:
                 task = self.onto.AssemblyTask()
                 task.actsOn.append(pair[0])
-
-                print(pair)
                 task.has_place_goal.extend(pair[1])
                 method.hasSubtask.append(task)
         else:

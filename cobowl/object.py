@@ -29,7 +29,7 @@ class SemanticObjectInterface():
 
     def create(self, type):
         product = self._get_object(type)
-        return product()
+        return product(type)
 
     def _get_object(self, type):
         print("OBJECT")
@@ -43,20 +43,20 @@ class SemanticObjectInterface():
         elif type == "separator":
             return self._create_separator
         else:
-            raise ValueError(type)
+            return self._create_object
 
-    def _create_box(self):
+    def _create_box(self, type):
         box = self.onto.Box(has_feature = [], is_called = ["box"])
         box.has_feature.append(self.feature_interface.create("hollow_space", "rectangular"))
         box.has_feature.append(self.feature_interface.create("boundaries", "rectangular"))
         return box
 
-    def _create_peg(self):
+    def _create_peg(self, type):
         peg = self.onto.Peg(has_feature = [], is_called = ["peg"])
         peg.has_feature.append(self.feature_interface.create("head", "rectangular"))
         return peg
 
-    def _create_faceplate(self):
+    def _create_faceplate(self, type):
         faceplate = self.onto.Faceplate(has_feature = [], is_called = ["faceplate"])
         faceplate.has_feature.append(self.feature_interface.create("hole", "round"))
         faceplate.has_feature.append(self.feature_interface.create("hole", "round"))
@@ -65,8 +65,12 @@ class SemanticObjectInterface():
         faceplate.has_feature.append(self.feature_interface.create("hole", "rectangular"))
         return faceplate
 
-    def _create_separator(self):
+    def _create_separator(self, type):
         separator = self.onto.Separator(has_feature = [], is_called = ["separator"])
         separator.has_feature.append(self.feature_interface.create("hole", "rectangular"))
         separator.has_feature.append(self.feature_interface.create("hole", "rectangular"))
         return separator
+
+    def _create_object(self, type):
+        obj = self.onto.Object(has_feature = [], is_called = [type])
+        return obj
