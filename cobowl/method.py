@@ -38,8 +38,12 @@ class MethodInterface():
         robot = self.onto.search_one(type = self.onto.Robot)
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
-        if cmd.has_action=="give" or cmd.has_action=="take":
-            task = self.onto.HandoverTask()
+        if cmd.has_action=="give":
+            task = self.onto.RobotToHumanHandoverTask()
+            task.actsOn.extend(anchored_objects)
+            method.hasSubtask.append(task)
+        elif cmd.has_action=="take":
+            task = self.onto.HumanToRobotHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
         elif cmd.has_action=="lift":
