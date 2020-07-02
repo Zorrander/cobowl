@@ -59,7 +59,9 @@ class DigitalWorld():
         return self.onto.get_parents_of(task.is_a[0])[0].name
 
     def find_satisfied_method(self, current_task):
-        method = self.has_highest_priority([method for method in current_task.is_a[0].hasMethod if self.are_preconditions_met(method)])
+        list_methods = current_task.is_a[0].hasMethod
+        print("Found the following methods: {}".format(list_methods))
+        method = self.has_highest_priority([method for method in list_methods if self.are_preconditions_met(method)])
         return self.method_interface.create(method, current_task)
 
     def has_highest_priority(self, methods):
