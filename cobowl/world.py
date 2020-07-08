@@ -49,9 +49,11 @@ class DigitalWorld():
 
     def send_command(self, command, target=None):
         with self.onto:
+            print("adding cmd")
             cmd = self.onto.Command()
             cmd.has_action = command
             if target:
+                print("found target")
                 list_target = target if type(target) is list else [target]
                 cmd.has_target.extend(list_target)
 
@@ -79,6 +81,7 @@ class DigitalWorld():
         if len(list) > 0:
             for condition in list:
                 if not self.state_interface.evaluate(condition.name):
+                    print("Condition {} was not satisfied".format(condition.name))
                     result = False
                     break
         return result
