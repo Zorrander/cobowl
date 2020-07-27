@@ -24,6 +24,11 @@ class DigitalWorld():
         if cmd:
             destroy_entity(cmd)
 
+    def compare_goal(self, goal_state):
+        ''' TODO: take subject into account '''
+        print("Checking...{}".format(goal_state.predicate.is_a[0].name))
+        return self.state_interface.evaluate(goal_state.predicate.is_a[0].name, goal_state.subject)
+
     def clone(self):
         self.onto.save(file = str(Path.home() / 'cobot_logs' / 'plan.owl'), format = "rdfxml")
         return DigitalWorld(original_world=True)
@@ -49,11 +54,9 @@ class DigitalWorld():
 
     def send_command(self, command, target=None):
         with self.onto:
-            print("adding cmd")
             cmd = self.onto.Command()
             cmd.has_action = command
             if target:
-                print("found target")
                 list_target = target if type(target) is list else [target]
                 cmd.has_target.extend(list_target)
 
@@ -61,7 +64,6 @@ class DigitalWorld():
         return self.onto.get_parents_of(task.is_a[0])[0].name
 
     def find_satisfied_method(self, current_task):
-        print("find_satisfied_method")
         list_methods = current_task.is_a[0].hasMethod
         print("Found the following methods: {}".format(list_methods))
         method = self.has_highest_priority([method for method in list_methods if self.are_preconditions_met(method)])

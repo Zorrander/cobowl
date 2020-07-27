@@ -40,23 +40,31 @@ class MethodInterface():
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
         if cmd.has_action=="give":
+            print("Am I here")
             task = self.onto.RobotToHumanHandoverTask()
-            task.actsOn.extend(anchored_objects)
-            method.hasSubtask.append(task)
-            cmd.has_goal.subject = cmd.has_target
-            cmd.has_goal.predicate = self.onto.is_stored()
-        elif cmd.has_action=="take":
-            task = self.onto.HumanToRobotHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
             cmd.has_goal.subject = self.onto.agent
             cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
+        elif cmd.has_action=="take":
+            task = self.onto.HumanToRobotHandoverTask()
+            task.actsOn.extend(anchored_objects)
+            method.hasSubtask.append(task)
+            cmd.has_goal.predicate = self.onto.IsStored()
+            cmd.has_goal.subject = anchored_objects[0]
         elif cmd.has_action=="lift":
             task = self.onto.LiftingTask()
+            task.actsOn.extend(anchored_objects)
             task.has_place_goal.extend([self.onto.handover])
+            cmd.has_goal.predicate = self.onto.IsNotStored()
+            cmd.has_goal.subject = anchored_objects[0]
             method.hasSubtask.append(task)
         elif cmd.has_action=="drop":
             task = self.onto.DropingTask()
+            task.actsOn.extend(anchored_objects)
+            cmd.has_goal.predicate = self.onto.IsStored()
+            cmd.has_goal.subject = anchored_objects[0]
             task.has_place_goal.extend([self.onto.storage])
             method.hasSubtask.append(task)
         elif cmd.has_action=="pack":
@@ -70,15 +78,22 @@ class MethodInterface():
         elif cmd.has_action=="release":
             task = self.onto.ReleaseTask()
             task.actsOn.extend(anchored_objects)
+            cmd.has_goal.subject = self.onto.panda
+            cmd.has_goal.predicate = self.onto.IsNotHoldingSomething()
             method.hasSubtask.append(task)
         elif cmd.has_action=="grasp":
             task = self.onto.GraspTask()
+            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+            cmd.has_goal.subject = self.onto.panda
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
         elif cmd.has_action=="reach":
             task = self.onto.ReachTask()
+            cmd.has_goal.predicate = self.onto.IsCapableOfReaching()
+            cmd.has_goal.subject = self.onto.panda
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="stop":
             task = self.onto.StopTask()
             method.hasSubtask.append(task)
@@ -87,11 +102,16 @@ class MethodInterface():
             method.hasSubtask.append(task)
         elif cmd.has_action=="pick":
             task = self.onto.PickTask()
+            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+            cmd.has_goal.subject = self.onto.panda
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="place":
             task = self.onto.PlaceTask()
             task.actsOn.extend(anchored_objects)
+            cmd.has_goal.predicate = self.onto.IsStored()
+            cmd.has_goal.subject = anchored_objects[0]
             method.hasSubtask.append(task)
         elif cmd.has_action=="assemble":
             pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])

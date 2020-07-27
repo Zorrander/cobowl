@@ -8,23 +8,29 @@ class CollaborativeRobot():
         self.onto = onto
 
     def perform(self, primitive):
-        print("Robot Operator ==> {}".format(primitive))
-        
+        print("Robot Operator ==> {}".format(primitive.actsOn[0].__dict__))
+
         operator = self._get_operator(primitive.is_a[0].name, primitive)
         operator()
 
     def _get_operator(self, primitive_type, primitive):
+        self.onto.panda.isWaitingForSomething = False
         if primitive_type == "IdleTask":
             return self._use_idle_operator()
         elif primitive_type == "ResetTask":
-            self.onto.panda.isWaitingForSomething = True
             return self._use_reset_operator()
         elif primitive_type == "StopTask":
-            self.onto.panda.isWaitingForSomething = True
             return self._use_stop_operator()
         elif primitive_type == "LiftingTask":
+            tg = self.onto.search_one(iri = primitive.actsOn[0].iri)
+            tg.is_stored = False
+            print("Target in real world {}".format(tg.__dict__))
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "DropingTask":
+            # primitive.actsOn[0].is_stored = True
+            tg = self.onto.search_one(iri = primitive.actsOn[0].iri)
+            tg.is_stored = True
+            print("Target in real world {}".format(tg.__dict__))
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "WaitForTask":
             self.onto.panda.isWaitingForSomething = True
@@ -41,8 +47,6 @@ class CollaborativeRobot():
         elif primitive_type == "ReleaseTask":
             self.onto.panda.isHoldingSomething = False
             return self._use_open_operator()
-            if self.onto.panda.isWaitingForSomething:
-                self.onto.panda.isWaitingForSomething = False
         elif primitive_type == "TranslationTask":
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "AligningTask":
