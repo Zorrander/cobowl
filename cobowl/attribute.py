@@ -1,7 +1,7 @@
 from owlready2 import *
 import numpy as np
 import skfuzzy as fuzz
-from skfuzzy import control as ctrl
+# from skfuzzy import control as ctrl
 
 
 class SemanticAttributeInterface(Thing):

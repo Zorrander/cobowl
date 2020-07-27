@@ -35,6 +35,7 @@ class MethodInterface():
     def _create_cmd_method(self, type, current_task):
         method = self.onto.CommandMethod()
         cmd = self.onto.search_one(type = self.onto.Command)
+        cmd.has_goal = self.onto.Goal()
         robot = self.onto.search_one(type = self.onto.Robot)
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
@@ -42,10 +43,14 @@ class MethodInterface():
             task = self.onto.RobotToHumanHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+            cmd.has_goal.subject = cmd.has_target
+            cmd.has_goal.predicate = self.onto.is_stored()
         elif cmd.has_action=="take":
             task = self.onto.HumanToRobotHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+            cmd.has_goal.subject = self.onto.agent
+            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
         elif cmd.has_action=="lift":
             task = self.onto.LiftingTask()
             task.has_place_goal.extend([self.onto.handover])
@@ -118,4 +123,8 @@ class MethodInterface():
                     print(method.hasSubtask)
                     task.has_place_goal = current_task.has_place_goal
                 method.hasSubtask.append(new_instance)
+        print("EFFECTS...........")
+        print("{}".format(method.INDIRECT_hasEffect))
+        if method.INDIRECT_hasEffect:
+            method.hasSubtask[0].hasEffect = method.INDIRECT_hasEffect
         return method.hasSubtask

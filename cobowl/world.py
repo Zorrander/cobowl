@@ -61,9 +61,11 @@ class DigitalWorld():
         return self.onto.get_parents_of(task.is_a[0])[0].name
 
     def find_satisfied_method(self, current_task):
+        print("find_satisfied_method")
         list_methods = current_task.is_a[0].hasMethod
         print("Found the following methods: {}".format(list_methods))
         method = self.has_highest_priority([method for method in list_methods if self.are_preconditions_met(method)])
+        print("Found conditions: {}".format(method.is_a[0].INDIRECT_hasCondition))
         return self.method_interface.create(method, current_task)
 
     def has_highest_priority(self, methods):
@@ -87,10 +89,20 @@ class DigitalWorld():
         return result
 
     def are_preconditions_met(self, primitive):
-        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition)
+        print("are_preconditions_met")
+        print("Primitive: {}".format(primitive))
+        print("Found conditions: {}".format(primitive.is_a[0].INDIRECT_hasCondition + primitive.INDIRECT_hasCondition))
+        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition+ primitive.INDIRECT_hasCondition)
 
     def are_effects_satisfied(self, task):
-        return self.check_state(task.is_a[0].INDIRECT_hasEffect)
+        result = False
+        if len(task.is_a[0].INDIRECT_hasEffect) > 0:
+            for condition in task.is_a[0].INDIRECT_hasEffect:
+                if self.state_interface.evaluate(condition.name):
+                    print("Effect {} was satisfied".format(condition.name))
+                    result = True
+                    break
+        return result
 
     def find_subtasks(self, method):
         return method.hasSubtask
@@ -98,6 +110,7 @@ class DigitalWorld():
     def apply_effects(self, primitive):
         with self.onto:
             self.robot.perform(primitive)
+
 
     '''
     def resolve_conflicts(self, diff_vector):

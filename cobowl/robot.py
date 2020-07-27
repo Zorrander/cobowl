@@ -9,6 +9,7 @@ class CollaborativeRobot():
 
     def perform(self, primitive):
         print("Robot Operator ==> {}".format(primitive))
+        
         operator = self._get_operator(primitive.is_a[0].name, primitive)
         operator()
 
