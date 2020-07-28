@@ -113,6 +113,7 @@ class MethodInterface():
             cmd.has_goal.predicate = self.onto.IsStored()
             cmd.has_goal.subject = anchored_objects[0]
             method.hasSubtask.append(task)
+            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="assemble":
             pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])
             for pair in pairs:

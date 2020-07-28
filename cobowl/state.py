@@ -6,6 +6,9 @@ class StateInterface():
         self.onto = onto
 
     def evaluate(self, state, target = None):
+        print("Evaluating {}".format(target))
+        if isinstance(target, list) and len(target) == 1:
+            target = target[0]
         product = self._get_state(state)
         return product(target)
 
@@ -14,7 +17,7 @@ class StateInterface():
             return self._has_received_command
         elif state == "IsAligned":
             return self._is_aligned
-        elif state == "CanBereleased":
+        elif state == "CanBeReleased":
             return self._can_be_released
         elif state == "IsNotHoldingSomething":
             return self._is_not_holding_something
@@ -46,7 +49,12 @@ class StateInterface():
         return True if not target.is_stored else False
 
     def _can_be_released(self, target):
-        return True if target.IsReadyToBeTaken or target.is_stored else False
+        result = False
+        if 'isReadyToBeTaken' in target.__dict__ and target.isReadyToBeTaken:
+            result = True
+        elif 'is_stored' in target.__dict__ and target.is_stored:
+            result = True
+        return result
 
     def _has_received_command(self, target):
         return True if self.onto.search_one(type = self.onto.Command) else False
@@ -66,7 +74,13 @@ class StateInterface():
         return True if not self.onto.panda.isWaitingForSomething else False
 
     def _is_holding_something(self, target):
-        return self.onto.panda.isHoldingSomething
+        print("Is {} holding SOMETHING ()".format(target))
+        if target and target.is_a[0].name == "HumanAgent":
+            result = self.onto.agent.isHoldingSomething
+        else:
+            result = self.onto.panda.isHoldingSomething
+        print(result)
+        return result
 
     def _is_not_holding_something(self, target):
         return True if not self.onto.panda.isHoldingSomething else False

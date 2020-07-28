@@ -46,7 +46,7 @@ class CollaborativeRobot():
             return self._use_move_operator(primitive.actsOn)
         elif primitive_type == "ReleaseTask":
             self.onto.panda.isHoldingSomething = False
-            return self._use_open_operator()
+            return self._use_open_operator(primitive.actsOn)
         elif primitive_type == "TranslationTask":
             return self._use_move_operator(primitive.has_place_goal)
         elif primitive_type == "AligningTask":
@@ -65,7 +65,7 @@ class CollaborativeRobot():
             print("Grasping {}...".format(target))
         return grasp
 
-    def _use_open_operator(self):
+    def _use_open_operator(self, target):
         def release():
             print("Releasing...")
         return release

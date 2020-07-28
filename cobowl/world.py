@@ -80,11 +80,11 @@ class DigitalWorld():
                 max_prio = priority
         return result
 
-    def check_state(self, list):
+    def check_state(self, list, target = None):
         result = True
         if len(list) > 0:
             for condition in list:
-                if not self.state_interface.evaluate(condition.name):
+                if not self.state_interface.evaluate(condition.name, target):
                     print("Condition {} was not satisfied".format(condition.name))
                     result = False
                     break
@@ -93,8 +93,8 @@ class DigitalWorld():
     def are_preconditions_met(self, primitive):
         print("are_preconditions_met")
         print("Primitive: {}".format(primitive))
-        print("Found conditions: {}".format(primitive.is_a[0].INDIRECT_hasCondition + primitive.INDIRECT_hasCondition))
-        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition+ primitive.INDIRECT_hasCondition)
+        print("Found conditions: {} over {}".format(primitive.is_a[0].INDIRECT_hasCondition + primitive.INDIRECT_hasCondition, primitive.actsOn))
+        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition+ primitive.INDIRECT_hasCondition, primitive.actsOn)
 
     def are_effects_satisfied(self, task):
         result = False
