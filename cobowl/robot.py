@@ -1,86 +1,150 @@
-from owlready2 import *
-from .state import *
+import abc
+import os.path
+from os.path import expanduser
+from .world import *
+from .planner import *
 
+home = expanduser("~")
 
-class CollaborativeRobot():
+class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
-    def __init__(self, onto):
-        self.onto = onto
+    def __init__(self, knowledge_base_path):
+        self.world = DigitalWorld(base=knowledge_base_path)
+        self.planner = Planner(self.world)
+
+    @classmethod
+    def __subclasshook__(cls, subclass):
+        return (hasattr(subclass, 'move_operator') and
+                callable(subclass.move_operator) and
+                hasattr(subclass, 'close_operator') and
+                callable(subclass.close_operator) and
+                hasattr(subclass, 'open_operator') and
+                callable(subclass.open_operator) and
+                hasattr(subclass, 'idle_operator') and
+                callable(subclass.idle_operator) and
+                hasattr(subclass, 'stop_operator') and
+                callable(subclass.stop_operator) and
+                hasattr(subclass, 'reset_operator') and
+                callable(subclass.reset_operator) and
+                hasattr(subclass, 'connect') and
+                callable(subclass.connect) and
+                hasattr(subclass, 'notify') and
+                callable(subclass.notify))
+
+    def execute(self, command):
+        plan, goal = self.planner.create_plan(command)
+        for action in self.planner.run(plan, goal):
+            self.perform(action)
+
+    def run(self, cycles, command = None):
+        try:
+            action = command[0]
+            target = command[1]
+            self.world.send_command(action, target)
+            for x in range(cycles):
+                plan, goal = self.planner.create_plan()
+                for action in self.planner.run(plan, goal):
+                    self.perform(action)
+        except DispatchingError as e:
+            print("Dispatching Error: {}. Retrying... ".format(e.primitive))
+            #new_plan, goal = self.create_plan()
+            #self.run(new_plan, goal)
+
+    def production_mode(self):
+        ''' TODO: Enter idling mode automatically '''
+        pass
 
     def perform(self, primitive):
-        print("Robot Operator ==> {}".format(primitive.actsOn[0].__dict__))
-
-        operator = self._get_operator(primitive.is_a[0].name, primitive)
+        operator = self._get_operator(primitive)
         operator()
+        self.notify(primitive)
 
-    def _get_operator(self, primitive_type, primitive):
-        self.onto.panda.isWaitingForSomething = False
-        if primitive_type == "IdleTask":
-            return self._use_idle_operator()
-        elif primitive_type == "ResetTask":
-            return self._use_reset_operator()
-        elif primitive_type == "StopTask":
-            return self._use_stop_operator()
-        elif primitive_type == "LiftingTask":
-            tg = self.onto.search_one(iri = primitive.actsOn[0].iri)
-            tg.is_stored = False
-            print("Target in real world {}".format(tg.__dict__))
-            return self._use_move_operator(primitive.has_place_goal)
-        elif primitive_type == "DropingTask":
-            # primitive.actsOn[0].is_stored = True
-            tg = self.onto.search_one(iri = primitive.actsOn[0].iri)
-            tg.is_stored = True
-            print("Target in real world {}".format(tg.__dict__))
-            return self._use_move_operator(primitive.has_place_goal)
-        elif primitive_type == "WaitForTask":
-            self.onto.panda.isWaitingForSomething = True
-            return self._use_idle_operator()
-        elif primitive_type == "GraspTask":
-            self.onto.panda.isHoldingSomething = True
-            return self._use_close_operator(primitive.actsOn)
-        elif primitive_type == "ReachTask":
-            self.onto.panda.isCapableOfReaching = True
-            return self._use_move_operator(primitive.actsOn)
-        elif primitive_type == "InsertingTask":
-            self.onto.panda.isAligned = False
-            return self._use_move_operator(primitive.actsOn)
-        elif primitive_type == "ReleaseTask":
-            self.onto.panda.isHoldingSomething = False
-            return self._use_open_operator(primitive.actsOn)
-        elif primitive_type == "TranslationTask":
-            return self._use_move_operator(primitive.has_place_goal)
-        elif primitive_type == "AligningTask":
-            self.onto.panda.isAligned = True
-            return self._use_move_operator(primitive.has_place_goal)
+    def notify(self, task):
+        """Trigger an update in each subscriber. """
+        print("Subject: Notifying observers...")
+        self.world.update(task)
+
+    def _get_operator(self, primitive):
+        operator = primitive.is_a[0].INDIRECT_useOperator[0].name
+        print("TEST OPERATOR {} - {}".format(primitive, operator))
+        if operator == "IdleOperator":
+            return self.idle_operator()
+        elif operator == "ResetOperator":
+            return self.reset_operator()
+        elif operator == "StopOperator":
+            return self.stop_operator()
+        elif operator == "MoveOperator":
+            return self.move_operator(primitive.has_place_goal)
+        elif operator == "CloseOperator":
+            return self.close_operator(primitive.actsOn)
+        elif operator == "OpenOperator":
+            return self.open_operator(primitive.actsOn)
         else:
             raise ValueError(type)
 
-    def _use_move_operator(self, target):
+    @abc.abstractmethod
+    def move_operator(self, target):
+        """Move arm to a given position"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def close_operator(self, target):
+        """Robot blindly grasps"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def open_operator(self, target):
+        """Open gripper to full width"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def idle_operator(self):
+        """Robot enters waiting state"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def stop_operator(self):
+        """Stop robot motion"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def reset_operator(self):
+        """Send robot back to home pose"""
+        raise NotImplementedError
+
+
+class VirtualCollaborativeRobot(CollaborativeRobotInterface):
+
+    def __init__(self, knowledge_base_path):
+        super().__init__(knowledge_base_path)
+        self.world.add_object("peg")
+
+    def move_operator(self, target):
         def move_to():
             print("Moving to {}...".format(target))
         return move_to
 
-    def _use_close_operator(self, target):
+    def close_operator(self, target):
         def grasp():
             print("Grasping {}...".format(target))
         return grasp
 
-    def _use_open_operator(self, target):
+    def open_operator(self, target):
         def release():
-            print("Releasing...")
+            print("Releasing...{}...".format(target))
         return release
 
-    def _use_idle_operator(self):
+    def idle_operator(self):
         def wait():
             print("Waiting...")
         return wait
 
-    def _use_stop_operator(self):
+    def stop_operator(self):
         def stop():
             print("Stopping...")
         return stop
 
-    def _use_reset_operator(self):
+    def reset_operator(self):
         def reset():
             print("Reseting...")
         return reset

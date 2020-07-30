@@ -1,5 +1,5 @@
 from owlready2 import *
-from . import state, robot, workspace, method
+from . import state, workspace, method
 import copy
 from pathlib import Path
 import os
@@ -13,7 +13,6 @@ class DigitalWorld():
             cmd = self.onto.search_one(type = self.onto.Robot)
             self.onto.save(file = str(Path.home() / 'cobot_logs' / 'test.owl'), format = "rdfxml")
         #os.remove(str(Path.home() / 'cobot_logs' / 'plan.owl'))
-        self.robot = robot.CollaborativeRobot(self.onto)
         self.workspace = workspace.CollaborativeWorkspace(self.onto)
         self.method_interface = method.MethodInterface(self.onto)
         self.state_interface = state.StateInterface(self.onto)
@@ -109,9 +108,32 @@ class DigitalWorld():
     def find_subtasks(self, method):
         return method.hasSubtask
 
-    def apply_effects(self, primitive):
-        with self.onto:
-            self.robot.perform(primitive)
+    def update(self, primitive):
+        task = primitive.is_a[0].name
+        target = primitive.actsOn[0]
+        self.onto.panda.isWaitingForSomething = False
+        if task == "IdleTask":
+            pass
+        elif task == "ResetTask":
+            pass
+        elif task == "StopTask":
+            pass
+        elif task == "LiftingTask":
+            tg = self.onto.search_one(iri = target.iri)
+            tg.is_stored = False
+        elif task == "DropingTask":
+            tg = self.onto.search_one(iri = target.iri)
+            tg.is_stored = True
+        elif task == "WaitForTask":
+            self.onto.panda.isWaitingForSomething = True
+        elif task == "GraspTask":
+            self.onto.panda.isHoldingSomething = True
+        elif task == "ReachTask":
+            self.onto.panda.isCapableOfReaching = True
+        elif task == "ReleaseTask":
+            self.onto.panda.isHoldingSomething = False
+        else:
+            raise ValueError(type)
 
 
     '''
