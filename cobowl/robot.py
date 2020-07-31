@@ -32,15 +32,14 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
                 callable(subclass.notify))
 
     def execute(self, command):
-        plan, goal = self.planner.create_plan(command)
+        self.send_command(command)
+        plan, goal = self.planner.create_plan()
         for action in self.planner.run(plan, goal):
             self.perform(action)
 
     def run(self, cycles, command = None):
         try:
-            action = command[0]
-            target = command[1]
-            self.world.send_command(action, target)
+            self.send_command(command)
             for x in range(cycles):
                 plan, goal = self.planner.create_plan()
                 for action in self.planner.run(plan, goal):
@@ -83,6 +82,10 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
             raise ValueError(type)
 
     @abc.abstractmethod
+    def send_command(self, command):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def move_operator(self, target):
         """Move arm to a given position"""
         raise NotImplementedError
@@ -118,6 +121,11 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
     def __init__(self, knowledge_base_path):
         super().__init__(knowledge_base_path)
         self.world.add_object("peg")
+
+    def send_command(self, command):
+        action = command[0]
+        target = command[1]
+        self.world.send_command(action, target)
 
     def move_operator(self, target):
         def move_to():

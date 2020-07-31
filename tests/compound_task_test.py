@@ -6,8 +6,8 @@ from cobowl import robot
 
 home = expanduser("~")
 
-# RESOURCE_PATH  = os.path.join(home, "ros2", "src", "tuni-semweb", "cobot_knowledge", "resource", "database")
-RESOURCE_PATH  = os.path.join(home, "tuni-semweb", "cobot_knowledge", "resource", "database")
+RESOURCE_PATH  = os.path.join(home, "ros2", "src", "tuni-semweb", "cobot_knowledge", "resource", "database")
+# RESOURCE_PATH  = os.path.join(home, "tuni-semweb", "cobot_knowledge", "resource", "database")
 
 class TestPrimitiveTasks(unittest.TestCase):
     def setUp(self):
