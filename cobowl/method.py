@@ -1,4 +1,5 @@
 from owlready2 import *
+from .state import *
 import copy
 
 class MethodInterface():
@@ -39,8 +40,10 @@ class MethodInterface():
         robot = self.onto.search_one(type = self.onto.Robot)
         anchored_objects = self.anchor(cmd.has_target)
         method.actsOn.extend(anchored_objects)
+
+        print("Am I here")
         if cmd.has_action=="give":
-            print("Am I here")
+
             task = self.onto.RobotToHumanHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
@@ -92,6 +95,12 @@ class MethodInterface():
             cmd.has_goal.predicate = self.onto.IsCapableOfReaching()
             cmd.has_goal.subject = self.onto.panda
             task.actsOn.extend(anchored_objects)
+            print("Target reach")
+            print(anchored_objects[0].__dict__)
+            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                task.has_place_goal.extend([self.onto.storage])
+            else:
+                task.has_place_goal.extend([self.onto.handover])
             method.hasSubtask.append(task)
             print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="stop":
