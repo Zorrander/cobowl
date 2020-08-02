@@ -35,15 +35,17 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
         self.send_command(command)
         plan, goal = self.planner.create_plan()
         for action in self.planner.run(plan, goal):
+            print(action.__dict__)
             self.perform(action)
 
-    def run(self, cycles, command = None):
+    def run(self, command = None):
         try:
             self.send_command(command)
-            for x in range(cycles):
-                plan, goal = self.planner.create_plan()
+            plan, goal = self.planner.create_plan()
+            while not self.world.compare_goal(goal):
                 for action in self.planner.run(plan, goal):
                     self.perform(action)
+                plan, _ = self.planner.create_plan()
         except DispatchingError as e:
             print("Dispatching Error: {}. Retrying... ".format(e.primitive))
             #new_plan, goal = self.create_plan()

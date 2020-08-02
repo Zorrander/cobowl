@@ -43,12 +43,15 @@ class MethodInterface():
 
         print("Am I here")
         if cmd.has_action=="give":
-
             task = self.onto.RobotToHumanHandoverTask()
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
             cmd.has_goal.subject = self.onto.agent
             cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                task.has_place_goal.extend([self.onto.storage])
+            else:
+                task.has_place_goal.extend([self.onto.handover])
             print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="take":
             task = self.onto.HumanToRobotHandoverTask()
@@ -56,6 +59,7 @@ class MethodInterface():
             method.hasSubtask.append(task)
             cmd.has_goal.predicate = self.onto.IsStored()
             cmd.has_goal.subject = anchored_objects[0]
+            task.has_place_goal.extend([self.onto.handover])
         elif cmd.has_action=="lift":
             task = self.onto.LiftingTask()
             task.actsOn.extend(anchored_objects)
@@ -115,6 +119,10 @@ class MethodInterface():
             cmd.has_goal.subject = self.onto.panda
             task.actsOn.extend(anchored_objects)
             method.hasSubtask.append(task)
+            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                task.has_place_goal.extend([self.onto.storage])
+            else:
+                task.has_place_goal.extend([self.onto.handover])
             print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="place":
             task = self.onto.PlaceTask()
@@ -122,6 +130,7 @@ class MethodInterface():
             cmd.has_goal.predicate = self.onto.IsStored()
             cmd.has_goal.subject = anchored_objects[0]
             method.hasSubtask.append(task)
+
             print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
         elif cmd.has_action=="assemble":
             pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])
@@ -151,7 +160,11 @@ class MethodInterface():
                 if current_task.has_place_goal:
                     print("propagate")
                     print(method.hasSubtask)
-                    task.has_place_goal = current_task.has_place_goal
+                    if new_instance.is_a[0].name == "LiftingTask":
+                        new_instance.has_place_goal = [self.onto.handover]
+                    else:
+                        new_instance.has_place_goal = current_task.has_place_goal
+                print("NEW SUBTASK CLASSICAL WAY : {}".format(new_instance.__dict__))
                 method.hasSubtask.append(new_instance)
         print("EFFECTS...........")
         print("{}".format(method.INDIRECT_hasEffect))
