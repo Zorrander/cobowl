@@ -7,6 +7,15 @@ class MethodInterface():
 
     def __init__(self, onto):
         self.onto = onto
+        with onto:
+            class Command(Thing): pass
+
+            class PlanRequest(Command): pass
+
+            class Signal(Command): pass
+
+            class is_triggered_by(Command >> str, FunctionalProperty):
+                python_name = triggered_by
 
     def create(self, type, current_task):
         product = self._get_method_builder(type)

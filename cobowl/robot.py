@@ -9,9 +9,16 @@ home = expanduser("~")
 class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def __init__(self, knowledge_base_path):
+        print("Loading knowledge base...")
         self.knowledge_base_path = knowledge_base_path
         self.world = DigitalWorld(base=knowledge_base_path)
+        print("Loading user defined concepts...")
+        # TODO
+        print("Intializing planner...")
         self.planner = Planner(self.world)
+        print("Robot up and running...")
+        commands = self.world.fetch_available_commands()
+        self.say_hello(commands)
 
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -27,10 +34,16 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
                 callable(subclass.stop_operator) and
                 hasattr(subclass, 'reset_operator') and
                 callable(subclass.reset_operator) and
-                hasattr(subclass, 'connect') and
-                callable(subclass.connect) and
-                hasattr(subclass, 'notify') and
-                callable(subclass.notify))
+                hasattr(subclass, 'say_hello') and
+                callable(subclass.say_hello) and
+                hasattr(subclass, 'handle_anchoring_error') and
+                callable(subclass.handle_anchoring_error)and
+                hasattr(subclass, 'send_command') and
+                callable(subclass.send_command)and
+                hasattr(subclass, 'pre_notify') and
+                callable(subclass.pre_notify)and
+                hasattr(subclass, 'post_notify') and
+                callable(subclass.post_notify))
 
     def reload_knowledge(self):
         self.world = DigitalWorld(base=self.knowledge_base_path)
@@ -67,17 +80,28 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def production_mode(self):
         ''' TODO: Enter idling mode automatically '''
-        pass
+        try:
+            while True:
+                plan, goal = self.planner.create_plan()
+                for action in self.planner.run(plan, goal):
+                    self.perform(action)
+                if self.world.compare_goal(goal):
+                    break
+                else:
+                    plan, _ = self.planner.create_plan()
+        except AnchoringError as e:
+            print("Propagate anchoring errror - {}".format(e.objects))
+            self.handle_anchoring_error(e.objects)
+        except DispatchingError as e:
+            print("Dispatching Error: {}".format(e.primitive))
+            self.production_mode()
 
     def perform(self, primitive):
         operator = self._get_operator(primitive)
+        self.pre_notify(primitive)
         operator()
-        self.notify(primitive)
-
-    def notify(self, task):
-        """Trigger an update in each subscriber. """
-        print("Subject: Notifying observers...")
-        self.world.update(task)
+        self.world.update(primitive)
+        self.post_notify(primitive)
 
     def _get_operator(self, primitive):
         operator = primitive.is_a[0].INDIRECT_useOperator[0].name
@@ -97,10 +121,22 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
         else:
             raise ValueError(type)
 
-
     @abc.abstractmethod
     def handle_anchoring_error(self, object):
         """Robot enters waiting state"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def say_hello(self, commands):
+        """Robot enters waiting state"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def pre_notify(self, task):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def post_notify(self, task):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -144,6 +180,21 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
         super().__init__(knowledge_base_path)
         self.world.add_object("peg")
 
+    def say_hello(self, commands):
+        print()
+        print("PANDA PLATFORM INTERFACE")
+        print("========================")
+        print()
+        print("To command the robot use one of the following trigger words:")
+        for cmd in commands:
+            print("- {}".format(cmd))
+
+    def pre_notify(self, task):
+        print("About to perform {}".format(task))
+
+    def post_notify(self, task):
+        print("{} completed".format(task))
+
     def send_command(self, command):
         action = command[0]
         target = command[1]
@@ -178,3 +229,7 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
         def reset():
             print("Reseting...")
         return reset
+
+    def handle_anchoring_error(self, object):
+        print("REACH FINAL STAGE OF ERROR")
+        print("COULD NOT ANCHOR", object)
