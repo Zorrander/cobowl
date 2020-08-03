@@ -1,6 +1,7 @@
 from owlready2 import *
 from .state import *
 import copy
+from .error import *
 
 class MethodInterface():
 
@@ -17,6 +18,8 @@ class MethodInterface():
             real_object = self.onto.search_one(type = self.onto.Object, is_called = target)
             if real_object:
                     anchored.append(real_object)
+        if physical_objects and not anchored:
+            raise AnchoringError(physical_objects)
         return anchored
 
     def match_objects(self, assembly_set, anchored_objects, list_pairs):
@@ -34,118 +37,122 @@ class MethodInterface():
             return self._create_normal_method
 
     def _create_cmd_method(self, type, current_task):
-        method = self.onto.CommandMethod()
-        cmd = self.onto.search_one(type = self.onto.Command)
-        cmd.has_goal = self.onto.Goal()
-        robot = self.onto.search_one(type = self.onto.Robot)
-        anchored_objects = self.anchor(cmd.has_target)
-        method.actsOn.extend(anchored_objects)
+        try:
+            method = self.onto.CommandMethod()
+            cmd = self.onto.search_one(type = self.onto.Command)
+            cmd.has_goal = self.onto.Goal()
+            robot = self.onto.search_one(type = self.onto.Robot)
+            anchored_objects = self.anchor(cmd.has_target)
+            method.actsOn.extend(anchored_objects)
 
-        print("Am I here")
-        if cmd.has_action=="give":
-            task = self.onto.RobotToHumanHandoverTask()
-            task.actsOn.extend(anchored_objects)
-            method.hasSubtask.append(task)
-            cmd.has_goal.subject = self.onto.agent
-            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
-            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
-                task.has_place_goal.extend([self.onto.storage])
-            else:
-                task.has_place_goal.extend([self.onto.handover])
-            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
-        elif cmd.has_action=="take":
-            task = self.onto.HumanToRobotHandoverTask()
-            task.actsOn.extend(anchored_objects)
-            method.hasSubtask.append(task)
-            cmd.has_goal.predicate = self.onto.IsStored()
-            cmd.has_goal.subject = anchored_objects[0]
-            task.has_place_goal.extend([self.onto.handover])
-        elif cmd.has_action=="lift":
-            task = self.onto.LiftingTask()
-            task.actsOn.extend(anchored_objects)
-            task.has_place_goal.extend([self.onto.handover])
-            cmd.has_goal.predicate = self.onto.IsNotStored()
-            cmd.has_goal.subject = anchored_objects[0]
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="drop":
-            task = self.onto.DropingTask()
-            task.actsOn.extend(anchored_objects)
-            cmd.has_goal.predicate = self.onto.IsStored()
-            cmd.has_goal.subject = anchored_objects[0]
-            task.has_place_goal.extend([self.onto.storage])
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="pack":
-            task = self.onto.PackingTask()
-            task.actsOn.extend(anchored_objects)
-            target_goal = self.onto.search_one(type = self.onto.Container)
-            print("found container for packing task")
-            print(target_goal)
-            task.has_place_goal.append(target_goal)
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="release":
-            task = self.onto.ReleaseTask()
-            task.actsOn.extend(anchored_objects)
-            cmd.has_goal.subject = self.onto.panda
-            cmd.has_goal.predicate = self.onto.IsNotHoldingSomething()
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="grasp":
-            task = self.onto.GraspTask()
-            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
-            cmd.has_goal.subject = self.onto.panda
-            task.actsOn.extend(anchored_objects)
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="reach":
-            task = self.onto.ReachTask()
-            cmd.has_goal.predicate = self.onto.IsCapableOfReaching()
-            cmd.has_goal.subject = self.onto.panda
-            task.actsOn.extend(anchored_objects)
-            print("Target reach")
-            print(anchored_objects[0].__dict__)
-            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
-                task.has_place_goal.extend([self.onto.storage])
-            else:
-                task.has_place_goal.extend([self.onto.handover])
-            method.hasSubtask.append(task)
-            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
-        elif cmd.has_action=="stop":
-            task = self.onto.StopTask()
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="reset":
-            task = self.onto.ResetTask()
-            method.hasSubtask.append(task)
-        elif cmd.has_action=="pick":
-            task = self.onto.PickTask()
-            cmd.has_goal.predicate = self.onto.IsHoldingSomething()
-            cmd.has_goal.subject = self.onto.panda
-            task.actsOn.extend(anchored_objects)
-            method.hasSubtask.append(task)
-            if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
-                task.has_place_goal.extend([self.onto.storage])
-            else:
-                task.has_place_goal.extend([self.onto.handover])
-            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
-        elif cmd.has_action=="place":
-            task = self.onto.PlaceTask()
-            task.actsOn.extend(anchored_objects)
-            cmd.has_goal.predicate = self.onto.IsStored()
-            cmd.has_goal.subject = anchored_objects[0]
-            method.hasSubtask.append(task)
-
-            print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
-        elif cmd.has_action=="assemble":
-            pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])
-            for pair in pairs:
-                for comp in pairs:
-                    if pair[0] in comp and pair[1] in comp:
-                        pairs.remove(pair)
-            for pair in pairs:
-                task = self.onto.AssemblyTask()
-                task.actsOn.append(pair[0])
-                task.has_place_goal.extend(pair[1])
+            print("Am I here")
+            if cmd.has_action=="give":
+                task = self.onto.RobotToHumanHandoverTask()
+                task.actsOn.extend(anchored_objects)
                 method.hasSubtask.append(task)
-        else:
-            print("Error")
-            raise ValueError(cmd.has_action)
+                cmd.has_goal.subject = self.onto.agent
+                cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+                if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                    task.has_place_goal.extend([self.onto.storage])
+                else:
+                    task.has_place_goal.extend([self.onto.handover])
+                print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
+            elif cmd.has_action=="take":
+                task = self.onto.HumanToRobotHandoverTask()
+                task.actsOn.extend(anchored_objects)
+                method.hasSubtask.append(task)
+                cmd.has_goal.predicate = self.onto.IsStored()
+                cmd.has_goal.subject = anchored_objects[0]
+                task.has_place_goal.extend([self.onto.handover])
+            elif cmd.has_action=="lift":
+                task = self.onto.LiftingTask()
+                task.actsOn.extend(anchored_objects)
+                task.has_place_goal.extend([self.onto.handover])
+                cmd.has_goal.predicate = self.onto.IsNotStored()
+                cmd.has_goal.subject = anchored_objects[0]
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="drop":
+                task = self.onto.DropingTask()
+                task.actsOn.extend(anchored_objects)
+                cmd.has_goal.predicate = self.onto.IsStored()
+                cmd.has_goal.subject = anchored_objects[0]
+                task.has_place_goal.extend([self.onto.storage])
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="pack":
+                task = self.onto.PackingTask()
+                task.actsOn.extend(anchored_objects)
+                target_goal = self.onto.search_one(type = self.onto.Container)
+                print("found container for packing task")
+                print(target_goal)
+                task.has_place_goal.append(target_goal)
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="release":
+                task = self.onto.ReleaseTask()
+                task.actsOn.extend(anchored_objects)
+                cmd.has_goal.subject = self.onto.panda
+                cmd.has_goal.predicate = self.onto.IsNotHoldingSomething()
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="grasp":
+                task = self.onto.GraspTask()
+                cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+                cmd.has_goal.subject = self.onto.panda
+                task.actsOn.extend(anchored_objects)
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="reach":
+                task = self.onto.ReachTask()
+                cmd.has_goal.predicate = self.onto.IsCapableOfReaching()
+                cmd.has_goal.subject = self.onto.panda
+                task.actsOn.extend(anchored_objects)
+                print("Target reach")
+                print(anchored_objects[0].__dict__)
+                if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                    task.has_place_goal.extend([self.onto.storage])
+                else:
+                    task.has_place_goal.extend([self.onto.handover])
+                method.hasSubtask.append(task)
+                print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
+            elif cmd.has_action=="stop":
+                task = self.onto.StopTask()
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="reset":
+                task = self.onto.ResetTask()
+                method.hasSubtask.append(task)
+            elif cmd.has_action=="pick":
+                task = self.onto.PickTask()
+                cmd.has_goal.predicate = self.onto.IsHoldingSomething()
+                cmd.has_goal.subject = self.onto.panda
+                task.actsOn.extend(anchored_objects)
+                method.hasSubtask.append(task)
+                if not 'is_stored' in anchored_objects[0].__dict__ or ('is_stored' in anchored_objects[0].__dict__ and anchored_objects[0].is_stored):
+                    task.has_place_goal.extend([self.onto.storage])
+                else:
+                    task.has_place_goal.extend([self.onto.handover])
+                print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
+            elif cmd.has_action=="place":
+                task = self.onto.PlaceTask()
+                task.actsOn.extend(anchored_objects)
+                cmd.has_goal.predicate = self.onto.IsStored()
+                cmd.has_goal.subject = anchored_objects[0]
+                method.hasSubtask.append(task)
+
+                print("Command goal becomes: {}".format(cmd.has_goal.__dict__))
+            elif cmd.has_action=="assemble":
+                pairs = self.match_objects([x for x in anchored_objects], anchored_objects, [])
+                for pair in pairs:
+                    for comp in pairs:
+                        if pair[0] in comp and pair[1] in comp:
+                            pairs.remove(pair)
+                for pair in pairs:
+                    task = self.onto.AssemblyTask()
+                    task.actsOn.append(pair[0])
+                    task.has_place_goal.extend(pair[1])
+                    method.hasSubtask.append(task)
+            else:
+                print("Error")
+                raise ValueError(cmd.has_action)
+        except AnchoringError as e:
+            print("Entered anchoring error", e.objects)
+            raise
         return method.hasSubtask
 
 

@@ -1,5 +1,5 @@
 from owlready2 import *
-from . import state, workspace, method
+from . import state, workspace, method, error
 import copy
 from pathlib import Path
 import os
@@ -25,8 +25,11 @@ class DigitalWorld():
 
     def compare_goal(self, goal_state):
         ''' TODO: take subject into account '''
-        print("Checking...{}".format(goal_state.predicate.is_a[0].name))
-        return self.state_interface.evaluate(goal_state.predicate.is_a[0].name, goal_state.subject)
+        if not 'subject' in goal_state.__dict__:  # There is no goal, action deemed successful by default
+            return True
+        else:
+            print("Checking...{}".format(goal_state.predicate.is_a[0].name))
+            return self.state_interface.evaluate(goal_state.predicate.is_a[0].name, goal_state.subject)
 
     def clone(self):
         self.onto.save(file = str(Path.home() / 'cobot_logs' / 'plan.owl'), format = "rdfxml")
@@ -63,11 +66,15 @@ class DigitalWorld():
         return self.onto.get_parents_of(task.is_a[0])[0].name
 
     def find_satisfied_method(self, current_task):
-        list_methods = current_task.is_a[0].hasMethod
-        print("Found the following methods: {}".format(list_methods))
-        method = self.has_highest_priority([method for method in list_methods if self.are_preconditions_met(method)])
-        print("Found conditions: {}".format(method.is_a[0].INDIRECT_hasCondition))
-        return self.method_interface.create(method, current_task)
+        try:
+            list_methods = current_task.is_a[0].hasMethod
+            print("Found the following methods: {}".format(list_methods))
+            method = self.has_highest_priority([method for method in list_methods if self.are_preconditions_met(method)])
+            print("Found conditions: {}".format(method.is_a[0].INDIRECT_hasCondition))
+            return self.method_interface.create(method, current_task)
+        except error.AnchoringError as e:
+            print("Propagate anchoring errror - {}".format(e.objects))
+            raise
 
     def has_highest_priority(self, methods):
         max_prio = 100
@@ -110,7 +117,8 @@ class DigitalWorld():
 
     def update(self, primitive):
         task = primitive.is_a[0].name
-        target = primitive.actsOn[0]
+        if primitive.actsOn:
+            target = primitive.actsOn[0]
         self.onto.panda.isWaitingForSomething = False
         if task == "IdleTask":
             pass

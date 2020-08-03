@@ -1,6 +1,4 @@
-class DispatchingError(Exception):
-   def __init__(self, primitive):
-      self.primitive = primitive
+from .error import *
 
 class Planner():
 
@@ -22,34 +20,37 @@ class Planner():
         return planning_world.find_satisfied_method(current_task)
 
     def search(self, final_plan, tasks_to_process, planning_world):
-        print("Tasks to process: {}".format(tasks_to_process))
-        if tasks_to_process:
-            current_task = tasks_to_process.pop(0)
-            type = planning_world.find_type(current_task)
-            if type == "CompoundTask":
-                new_tasks = self.explore_compound_task(current_task, planning_world)
-                if len(new_tasks) == 1 and new_tasks[0].is_a[0].name == "State":
-                    final_plan.insert(0, new_tasks[0])
-                elif new_tasks:
-                    print("Found compound task and new tasks are {}".format(new_tasks))
-                    tasks_to_process.extend(new_tasks)
-                    self.search(final_plan, tasks_to_process, planning_world)
-                    #del tasks_to_process[:-len(new_tasks)]
-                else:
-                    tasks_to_process.append(current_task)
-                    self.search(final_plan, tasks_to_process, planning_world)
-            else:  # Primitive task
-                if self.explore_cond_primitive_task(current_task, planning_world):
-                    planning_world.update(current_task)
-                    self.search(final_plan, tasks_to_process, planning_world)
-                    final_plan.insert(0, current_task)
-                else:
-                    if not self.explore_effects_primitive_task(current_task, planning_world):
+        try:
+            print("Tasks to process: {}".format(tasks_to_process))
+            if tasks_to_process:
+                current_task = tasks_to_process.pop(0)
+                type = planning_world.find_type(current_task)
+                if type == "CompoundTask":
+                    new_tasks = self.explore_compound_task(current_task, planning_world)
+                    if len(new_tasks) == 1 and new_tasks[0].is_a[0].name == "State":
+                        final_plan.insert(0, new_tasks[0])
+                    elif new_tasks:
+                        print("Found compound task and new tasks are {}".format(new_tasks))
+                        tasks_to_process.extend(new_tasks)
+                        self.search(final_plan, tasks_to_process, planning_world)
+                        #del tasks_to_process[:-len(new_tasks)]
+                    else:
                         tasks_to_process.append(current_task)
-                    #tasks_to_process.append(current_task)
-                    self.search(final_plan, tasks_to_process, planning_world)
-        return final_plan
-
+                        self.search(final_plan, tasks_to_process, planning_world)
+                else:  # Primitive task
+                    if self.explore_cond_primitive_task(current_task, planning_world):
+                        planning_world.update(current_task)
+                        self.search(final_plan, tasks_to_process, planning_world)
+                        final_plan.insert(0, current_task)
+                    else:
+                        if not self.explore_effects_primitive_task(current_task, planning_world):
+                            tasks_to_process.append(current_task)
+                        #tasks_to_process.append(current_task)
+                        self.search(final_plan, tasks_to_process, planning_world)
+            return final_plan
+        except AnchoringError as e:
+            print("Propagate anchoring errror - {}".format(e.objects))
+            raise
 
     def create_plan(self, command=None, root_task=None):
         try:
@@ -64,6 +65,9 @@ class Planner():
             print("PLAN: {}".format(final_plan))
             print("GOAL: {}".format(goal))
             return final_plan, goal
+        except AnchoringError as e:
+            print("Propagate anchoring errror - {}".format(e.objects))
+            raise
         except Exception as e:
             print(e)
 

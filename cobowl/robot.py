@@ -9,6 +9,7 @@ home = expanduser("~")
 class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def __init__(self, knowledge_base_path):
+        self.knowledge_base_path = knowledge_base_path
         self.world = DigitalWorld(base=knowledge_base_path)
         self.planner = Planner(self.world)
 
@@ -31,21 +32,34 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'notify') and
                 callable(subclass.notify))
 
+    def reload_knowledge(self):
+        self.world = DigitalWorld(base=self.knowledge_base_path)
+        self.planner = Planner(self.world)
+
     def execute(self, command):
-        self.send_command(command)
-        plan, goal = self.planner.create_plan()
-        for action in self.planner.run(plan, goal):
-            print(action.__dict__)
-            self.perform(action)
+        try:
+            self.send_command(command)
+            plan, goal = self.planner.create_plan()
+            for action in self.planner.run(plan, goal):
+                print(action.__dict__)
+                self.perform(action)
+        except Exception as e:
+            print(e)
 
     def run(self, command = None):
         try:
             self.send_command(command)
             plan, goal = self.planner.create_plan()
-            while not self.world.compare_goal(goal):
+            while True:
                 for action in self.planner.run(plan, goal):
                     self.perform(action)
-                plan, _ = self.planner.create_plan()
+                if self.world.compare_goal(goal):
+                    break
+                else:
+                    plan, _ = self.planner.create_plan()
+        except AnchoringError as e:
+            print("Propagate anchoring errror - {}".format(e.objects))
+            self.handle_anchoring_error(e.objects)
         except DispatchingError as e:
             print("Dispatching Error: {}. Retrying... ".format(e.primitive))
             #new_plan, goal = self.create_plan()
@@ -82,6 +96,12 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
             return self.open_operator(primitive.actsOn)
         else:
             raise ValueError(type)
+
+
+    @abc.abstractmethod
+    def handle_anchoring_error(self, object):
+        """Robot enters waiting state"""
+        raise NotImplementedError
 
     @abc.abstractmethod
     def send_command(self, command):
