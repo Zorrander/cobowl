@@ -6,7 +6,6 @@ class DigitalWorld():
     def __init__(self, original_world=None, root_task=None, base=None):
         self.world = World()
         self.onto = self.world.get_ontology(str(Path.home()/'cobot_logs'/'plan.owl')).load() if original_world else self.world.get_ontology(base).load()
-        onto = get_ontology("file:///home/jiba/onto/pizza_onto.owl").load()
         if original_world:
             cmd = self.onto.search_one(type = self.onto.Robot)
             self.onto.save(file = str(Path.home() / 'cobot_logs' / 'test.owl'), format = "rdfxml")
@@ -47,7 +46,7 @@ class DigitalWorld():
 
     def fetch_available_commands(self):
         objects = self.world.search(is_a = self.onto.Command)
-        return [obj.name for obj in objects]
+        return [obj.get_trigger_word() for obj in objects if obj.get_trigger_word()]
 
     def sync_reasoner(self):
         try:

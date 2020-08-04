@@ -1,18 +1,20 @@
 import abc
+from cmd import Cmd
 from .world import *
 from .planner import *
+
 
 class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def __init__(self, knowledge_base_path, user_folder):
-        print("Loading knowledge base...")
+        print("Loading knowledge base")
         self.knowledge_base_path = knowledge_base_path
         self.world = DigitalWorld(base=knowledge_base_path)
-        print("Loading user defined concepts...")
+        print("Loading user defined concepts")
         self.world.load_user_knowledge(user_folder)
-        print("Intializing planner...")
+        print("Intializing planner")
         self.planner = Planner(self.world)
-        print("Robot up and running...")
+        print("Robot up and running")
         commands = self.world.fetch_available_commands()
         self.say_hello(commands)
 
@@ -172,9 +174,16 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
 class VirtualCollaborativeRobot(CollaborativeRobotInterface):
 
-    def __init__(self, knowledge_base_path):
-        super().__init__(knowledge_base_path)
+    class RobotPrompt(Cmd):
+        pass
+
+    def __init__(self, knowledge_base_path, user_folder):
+        super().__init__(knowledge_base_path, user_folder)
         self.world.add_object("peg")
+
+    def start(self):
+        self.prompt = self.RobotPrompt()
+        self.prompt.cmdloop()
 
     def say_hello(self, commands):
         print()

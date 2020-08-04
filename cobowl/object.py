@@ -29,11 +29,10 @@ class SemanticObjectInterface():
 
     def create(self, type):
         product = self._get_object(type)
+        print("Registered a new object in the knowledge base >> {}".format(type))
         return product(type)
 
     def _get_object(self, type):
-        print("OBJECT")
-        print(type)
         if type == "box":
             return self._create_box
         elif type == "peg":

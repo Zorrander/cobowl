@@ -8,14 +8,49 @@ class MethodInterface():
     def __init__(self, onto):
         self.onto = onto
         with onto:
-            class Command(Thing): pass
+            class Object(Thing): pass
+
+            class Command(Thing):
+                @classmethod
+                def get_trigger_word(cls):
+                    return cls.triggered_by
+
+                def get_target(self):
+                    return self.target
 
             class PlanRequest(Command): pass
 
             class Signal(Command): pass
 
             class is_triggered_by(Command >> str, FunctionalProperty):
-                python_name = triggered_by
+                python_name = "triggered_by"
+
+            class has_target(Command >> Object, FunctionalProperty):
+                python_name = "target"
+
+            class Method(Thing):
+                def anchor(self, physical_objects):
+                    anchored = list()
+                    for target in physical_objects:
+                        real_object = self.onto.search_one(type = self.onto.Object, is_called = target)
+                        if real_object:
+                                anchored.append(real_object)
+                    if physical_objects and not anchored:
+                        raise AnchoringError(physical_objects)
+                    self.actsOn.extend(anchored_objects)
+                    return anchored_objects
+
+            class CommandMethod(Method):
+
+                def init_subtasks(self, anchored_objects):
+                    pass
+
+                def create(self):
+                    cmd = self.onto.search_one(type = self.onto.Command)
+                    anchored_objects = self.anchor(cmd.get_target())
+                    # Create subtasks
+                    # and link them to the target_pose and object manipulated
+                    self.init_subtasks(anchored_objects)
 
     def create(self, type, current_task):
         product = self._get_method_builder(type)
@@ -48,12 +83,13 @@ class MethodInterface():
     def _create_cmd_method(self, type, current_task):
         try:
             method = self.onto.CommandMethod()
+            method.create()
+            '''
             cmd = self.onto.search_one(type = self.onto.Command)
             cmd.has_goal = self.onto.Goal()
-            robot = self.onto.search_one(type = self.onto.Robot)
             anchored_objects = self.anchor(cmd.has_target)
             method.actsOn.extend(anchored_objects)
-
+            '''
             print("Am I here")
             if cmd.has_action=="give":
                 task = self.onto.RobotToHumanHandoverTask()
