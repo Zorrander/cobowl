@@ -9,14 +9,21 @@ class MethodInterface():
         self.onto = onto
         with onto:
             class Object(Thing): pass
-
+            class Task(Thing): pass
             class Command(Thing):
                 @classmethod
                 def get_trigger_word(cls):
                     return cls.triggered_by
 
+                @classmethod
+                def get_triggered_task(cls):
+                    return cls.triggers
+
                 def get_target(self):
                     return self.target
+
+                def set_target(self, target):
+                    self.target = target
 
             class PlanRequest(Command): pass
 
@@ -25,46 +32,47 @@ class MethodInterface():
             class is_triggered_by(Command >> str, FunctionalProperty):
                 python_name = "triggered_by"
 
-            class has_target(Command >> Object, FunctionalProperty):
+            class triggers(Command >> Task, FunctionalProperty):
+                python_name = "triggers"
+
+            class has_named_target(Command >> str, FunctionalProperty):
                 python_name = "target"
 
             class Method(Thing):
-                def anchor(self, physical_objects):
-                    anchored = list()
-                    for target in physical_objects:
-                        real_object = self.onto.search_one(type = self.onto.Object, is_called = target)
-                        if real_object:
-                                anchored.append(real_object)
-                    if physical_objects and not anchored:
-                        raise AnchoringError(physical_objects)
-                    self.actsOn.extend(anchored_objects)
-                    return anchored_objects
+                def anchor(self, target):
+                    try:
+                        print("[Method builder] anchoring {}".format(target))
+                        for obj in onto.search(type = onto.Object):
+                            if target in obj.is_called:
+                                real_object = obj
+                                break
+                        if target and not real_object:
+                            raise AnchoringError(target)
+                        self.actsOn = real_object
+                        print("[Method builder] method.actsOn -> {}".format(real_object))
+                        return real_object
+                    except Exception as e:
+                        print(e)
 
             class CommandMethod(Method):
 
-                def init_subtasks(self, anchored_objects):
-                    pass
+                def init_subtasks(self, cmd, anchored_objects):
+                    task = cmd.get_triggered_task()
+                    task = task()
+                    print("[Method builder] creating subtask {}".format(task))
+                    task.actsOn = anchored_objects
+                    return [task]
 
                 def create(self):
-                    cmd = self.onto.search_one(type = self.onto.Command)
-                    anchored_objects = self.anchor(cmd.get_target())
+                    cmd = onto.search_one(type = onto.Command)
+                    anchored_object = self.anchor(cmd.get_target())
                     # Create subtasks
                     # and link them to the target_pose and object manipulated
-                    self.init_subtasks(anchored_objects)
+                    return self.init_subtasks(cmd, anchored_object)
 
     def create(self, type, current_task):
         product = self._get_method_builder(type)
         return product(type, current_task)
-
-    def anchor(self, physical_objects):
-        anchored = list()
-        for target in physical_objects:
-            real_object = self.onto.search_one(type = self.onto.Object, is_called = target)
-            if real_object:
-                    anchored.append(real_object)
-        if physical_objects and not anchored:
-            raise AnchoringError(physical_objects)
-        return anchored
 
     def match_objects(self, assembly_set, anchored_objects, list_pairs):
         if anchored_objects:
@@ -83,7 +91,7 @@ class MethodInterface():
     def _create_cmd_method(self, type, current_task):
         try:
             method = self.onto.CommandMethod()
-            method.create()
+            return method.create()
             '''
             cmd = self.onto.search_one(type = self.onto.Command)
             cmd.has_goal = self.onto.Goal()

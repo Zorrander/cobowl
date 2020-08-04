@@ -4,11 +4,31 @@ class StateInterface():
 
     def __init__(self, onto):
         self.onto = onto
+        with onto:
+            class State(Thing):
+                def evaluate(self, target):
+                    print("Evaluating {}".format(target))
+                    print(self.subject.INDIRECT_get_properties())
+                    print(self.INDIRECT_get_properties())
+                    for subject_prop in self.subject.INDIRECT_get_properties():
+                        for effect_prop in self.INDIRECT_get_properties():
+                            if subject_prop == effect_prop:
+                                print(getattr(self, subject_prop.name))
+                                print(getattr(self.subject, subject_prop.name))
+                                print("Returning {}".format(getattr(self, subject_prop.name) == getattr(self.subject, subject_prop.name)))
+                                return getattr(self, subject_prop.name) == getattr(self.subject, subject_prop.name)
 
-    def evaluate(self, state, target = None):
-        print("Evaluating {}".format(target))
-        if isinstance(target, list) and len(target) == 1:
-            target = target[0]
+                def apply(self, target):
+                    for subject_prop in self.subject.INDIRECT_get_properties():
+                        for effect_prop in self.INDIRECT_get_properties():
+                            if subject_prop == effect_prop:
+                                new_value = getattr(self, effect_prop.name)
+                                setattr(self.subject, subject_prop.name, new_value)
+
+    def evaluate(self, state, target):
+
+        #if isinstance(target, list) and len(target) == 1:
+        #    target = target[0]
         product = self._get_state(state)
         return product(target)
 

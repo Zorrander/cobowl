@@ -27,9 +27,7 @@ class Planner():
                 type = planning_world.find_type(current_task)
                 if type == "CompoundTask":
                     new_tasks = self.explore_compound_task(current_task, planning_world)
-                    if len(new_tasks) == 1 and new_tasks[0].is_a[0].name == "State":
-                        final_plan.insert(0, new_tasks[0])
-                    elif new_tasks:
+                    if new_tasks:
                         print("Found compound task and new tasks are {}".format(new_tasks))
                         tasks_to_process.extend(new_tasks)
                         self.search(final_plan, tasks_to_process, planning_world)
@@ -61,6 +59,7 @@ class Planner():
             tasks_to_process = planning_world.root_task if not root_task else root_task
             final_plan = self.search(final_plan, tasks_to_process, planning_world)
             goal = planning_world.onto.search_one(type = planning_world.onto.Command)
+            print(goal.__dict__)
             goal = goal.has_goal
             print("PLAN: {}".format(final_plan))
             print("GOAL: {}".format(goal))

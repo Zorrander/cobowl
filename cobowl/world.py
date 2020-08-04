@@ -63,12 +63,21 @@ class DigitalWorld():
                     self.workspace.contains.append(object())
 
     def send_command(self, command, target=None):
-        with self.onto:
-            cmd = self.onto.Command()
-            cmd.has_action = command
-            if target:
-                list_target = target if type(target) is list else [target]
-                cmd.has_target.extend(list_target)
+        new_cmd = ""
+        for cmd in self.onto.search(is_a = self.onto.Command):
+            if cmd.get_trigger_word() == command:
+                new_cmd = cmd()
+                new_cmd.has_goal = self.onto.Goal()
+                new_cmd.has_action = command
+                if target:
+                    target = target[0] if type(target) is list else target
+                    new_cmd.set_target(target)
+                    print("[Command builder] created", new_cmd)
+                break
+        if not new_cmd:
+            raise error.GroundingError(command)
+        else:
+            self.onto.panda.has_received_command = True
 
     def find_type(self, task):
         return self.onto.get_parents_of(task.is_a[0])[0].name
@@ -83,6 +92,8 @@ class DigitalWorld():
         except error.AnchoringError as e:
             print("Propagate anchoring errror - {}".format(e.objects))
             raise
+        except Exception as e:
+            print(e)
 
     def has_highest_priority(self, methods):
         max_prio = 100
@@ -107,8 +118,15 @@ class DigitalWorld():
     def are_preconditions_met(self, primitive):
         print("are_preconditions_met")
         print("Primitive: {}".format(primitive))
-        print("Found conditions: {} over {}".format(primitive.is_a[0].INDIRECT_hasCondition + primitive.INDIRECT_hasCondition, primitive.actsOn))
-        return self.check_state(primitive.is_a[0].INDIRECT_hasCondition+ primitive.INDIRECT_hasCondition, primitive.actsOn)
+        conditions = primitive.INDIRECT_hasCondition
+        #conditions = conditions + primitive.is_a[0].INDIRECT_hasCondition
+        for cond in conditions:
+            print(cond)
+            print(self.onto[cond.name])
+            print("Found conditions: {} over {}".format(self.onto.search_one(type = self.onto[cond.name]), primitive.actsOn))
+            if not self.onto.search_one(type = self.onto[cond.name]).evaluate(primitive.actsOn):
+                return False
+        return True
 
     def are_effects_satisfied(self, task):
         result = False
@@ -124,10 +142,16 @@ class DigitalWorld():
         return method.hasSubtask
 
     def update(self, primitive):
+        print("update", primitive.is_a[0].hasEffect)
         task = primitive.is_a[0].name
+        print("update", primitive.__dict__)
         if primitive.actsOn:
-            target = primitive.actsOn[0]
+            target = primitive.actsOn
         self.onto.panda.isWaitingForSomething = False
+        for effect in primitive.is_a[0].hasEffect:
+            print(self.onto.search_one(type = self.onto[effect.name]))
+            self.onto.search_one(type = self.onto[effect.name]).apply(target)
+        '''
         if task == "IdleTask":
             pass
         elif task == "ResetTask":
@@ -150,7 +174,7 @@ class DigitalWorld():
             self.onto.panda.isHoldingSomething = False
         else:
             raise ValueError(type)
-
+        '''
 
     '''
     def resolve_conflicts(self, diff_vector):

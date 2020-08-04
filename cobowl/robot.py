@@ -1,5 +1,4 @@
 import abc
-from cmd import Cmd
 from .world import *
 from .planner import *
 
@@ -174,23 +173,14 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
 class VirtualCollaborativeRobot(CollaborativeRobotInterface):
 
-    class RobotPrompt(Cmd):
-        pass
-
     def __init__(self, knowledge_base_path, user_folder):
         super().__init__(knowledge_base_path, user_folder)
         self.world.add_object("peg")
 
-    def start(self):
-        self.prompt = self.RobotPrompt()
-        self.prompt.cmdloop()
-
     def say_hello(self, commands):
-        print()
-        print("PANDA PLATFORM INTERFACE")
-        print("========================")
-        print()
-        print("To command the robot use one of the following trigger words:")
+        print('\n PANDA PLATFORM INTERFACE')
+        print('======================== \n')
+        print('To command the robot use one of the following trigger words: \n')
         for cmd in commands:
             print("- {}".format(cmd))
 
