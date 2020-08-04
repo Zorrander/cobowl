@@ -1,14 +1,12 @@
 from owlready2 import *
-from . import state, workspace, method, error
-import copy
 from pathlib import Path
-import os
+from . import state, workspace, method, error
 
 class DigitalWorld():
-    #def __init__(self, original_world=None, root_task=None, host="https://onto-server-tuni.herokuapp.com"):
     def __init__(self, original_world=None, root_task=None, base=None):
         self.world = World()
         self.onto = self.world.get_ontology(str(Path.home()/'cobot_logs'/'plan.owl')).load() if original_world else self.world.get_ontology(base).load()
+        onto = get_ontology("file:///home/jiba/onto/pizza_onto.owl").load()
         if original_world:
             cmd = self.onto.search_one(type = self.onto.Robot)
             self.onto.save(file = str(Path.home() / 'cobot_logs' / 'test.owl'), format = "rdfxml")
@@ -17,6 +15,13 @@ class DigitalWorld():
         self.method_interface = method.MethodInterface(self.onto)
         self.state_interface = state.StateInterface(self.onto)
         self.root_task = list(root_task) if root_task else [self.onto.be]
+
+    def load_user_knowledge(self, folder_path):
+        print("Exploring {}...".format(folder_path))
+        directory = Path(folder_path)
+        for f in directory.iterdir():
+            print("- Found: {}".format(f.name))
+            self.world.get_ontology(str(directory / f)).load()
 
     def dismiss_command(self):
         cmd = self.onto.search_one(type = self.onto.Command)
@@ -39,6 +44,10 @@ class DigitalWorld():
         with self.onto:
             obj = self.workspace.add_object(name)
             return obj
+
+    def fetch_available_commands(self):
+        objects = self.world.search(is_a = self.onto.Command)
+        return [obj.name for obj in objects]
 
     def sync_reasoner(self):
         try:

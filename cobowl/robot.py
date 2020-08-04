@@ -1,19 +1,15 @@
 import abc
-import os.path
-from os.path import expanduser
 from .world import *
 from .planner import *
 
-home = expanduser("~")
-
 class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
-    def __init__(self, knowledge_base_path):
+    def __init__(self, knowledge_base_path, user_folder):
         print("Loading knowledge base...")
         self.knowledge_base_path = knowledge_base_path
         self.world = DigitalWorld(base=knowledge_base_path)
         print("Loading user defined concepts...")
-        # TODO
+        self.world.load_user_knowledge(user_folder)
         print("Intializing planner...")
         self.planner = Planner(self.world)
         print("Robot up and running...")
