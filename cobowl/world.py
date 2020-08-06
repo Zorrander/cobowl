@@ -27,13 +27,13 @@ class DigitalWorld():
         if cmd:
             destroy_entity(cmd)
 
-    def compare_goal(self, goal_state):
+    def compare_goal(self, goal_state, target = None):
         ''' TODO: take subject into account '''
-        if not 'subject' in goal_state.__dict__:  # There is no goal, action deemed successful by default
+        print("[WORLD compare_goal()]...{}".format(goal_state))
+        if not goal_state:  # There is no goal, action deemed successful by default
             return True
         else:
-            print("Checking...{}".format(goal_state.predicate.is_a[0].name))
-            return self.state_interface.evaluate(goal_state.predicate.is_a[0].name, goal_state.subject)
+            return goal_state.evaluate(target)
 
     def clone(self):
         self.onto.save(file = str(Path.home() / 'cobot_logs' / 'plan.owl'), format = "rdfxml")
@@ -45,8 +45,12 @@ class DigitalWorld():
             return obj
 
     def fetch_available_commands(self):
-        objects = self.world.search(is_a = self.onto.Command)
+        objects = self.onto.Command.instances()
         return [obj.get_trigger_word() for obj in objects if obj.get_trigger_word()]
+
+    def fetch_unsatisfied_command(self):
+        cmd = self.onto.Command.instances()
+        return cmd[0].INDIRECT_has_goal if cmd else False  # TODO: could choose command the most important
 
     def sync_reasoner(self):
         try:
@@ -62,13 +66,31 @@ class DigitalWorld():
                 if object.is_called == name:
                     self.workspace.contains.append(object())
 
+    def anchor(self, target):
+        try:
+            print("[World] anchoring {}".format(target))
+            for obj in self.onto.search(type = self.onto.Object):
+                if target in obj.is_called:
+                    real_object = obj
+                    break
+            if target and not real_object:
+                raise AnchoringError(target)
+            return real_object
+        except Exception as e:
+            print(e)
+
+        #self.actsOn = real_object
+        #print("[Method builder] method.actsOn -> {}".format(real_object))
+
+
+
     def send_command(self, command, target=None):
         new_cmd = ""
         for cmd in self.onto.search(is_a = self.onto.Command):
             if cmd.get_trigger_word() == command:
                 new_cmd = cmd()
-                new_cmd.has_goal = self.onto.Goal()
                 new_cmd.has_action = command
+                print("[WORLD send_command() - registered:]", new_cmd.__dict__)
                 if target:
                     target = target[0] if type(target) is list else target
                     new_cmd.set_target(target)
@@ -78,6 +100,13 @@ class DigitalWorld():
             raise error.GroundingError(command)
         else:
             self.onto.panda.has_received_command = True
+            if not new_cmd.INDIRECT_has_goal in self.onto.individuals():
+                print("updating goal")
+                goal = new_cmd.INDIRECT_has_goal()
+                goal.subject = self.anchor(target)
+                new_cmd.has_goal = goal
+                print("[WORLD send_command()]", new_cmd.__dict__)
+            return new_cmd.INDIRECT_has_goal
 
     def find_type(self, task):
         return self.onto.get_parents_of(task.is_a[0])[0].name
@@ -90,7 +119,6 @@ class DigitalWorld():
             print("Found conditions: {}".format(method.is_a[0].INDIRECT_hasCondition))
             return self.method_interface.create(method, current_task)
         except error.AnchoringError as e:
-            print("Propagate anchoring errror - {}".format(e.objects))
             raise
         except Exception as e:
             print(e)
@@ -122,18 +150,32 @@ class DigitalWorld():
         #conditions = conditions + primitive.is_a[0].INDIRECT_hasCondition
         for cond in conditions:
             print(cond)
-            print(self.onto[cond.name])
-            print("Found conditions: {} over {}".format(self.onto.search_one(type = self.onto[cond.name]), primitive.actsOn))
-            if not self.onto.search_one(type = self.onto[cond.name]).evaluate(primitive.actsOn):
+            print(cond.__dict__)
+            cond = self.onto.search_one(iri =cond.iri)
+            print("Found conditions: {} over {}".format(cond, primitive.actsOn))
+            print("Found conditions: {} over {}".format(cond, primitive.actsOn))
+            for x in self.onto.individuals():
+                print("ind - {}".format(x))
+            if not cond in self.onto.individuals():
+                print("update while create instance")
+                cond = cond()
+                for x in cond.INDIRECT_get_properties():
+                    print("{} -- {}".format(cond, getattr(cond, x.name)))
+                cond.subject = primitive.actsOn
+            if not cond.evaluate(primitive.actsOn):
+                print("OOPS RETURNING FALSE")
                 return False
+        print("OOOH YES RETURNING TRUE")
         return True
 
     def are_effects_satisfied(self, task):
         result = False
+        print("[WORLD] Cheking effect of", task)
         if len(task.is_a[0].INDIRECT_hasEffect) > 0:
-            for condition in task.is_a[0].INDIRECT_hasEffect:
-                if self.state_interface.evaluate(condition.name):
-                    print("Effect {} was satisfied".format(condition.name))
+            for effect in task.is_a[0].INDIRECT_hasEffect:
+                print("[WORLD]",  self.onto.search_one(iri =effect.iri))
+                if self.onto.search_one(iri =effect.iri).evaluate(task.actsOn):
+                    print("Effect {} was satisfied".format(self.onto.search_one(iri =effect.iri).name))
                     result = True
                     break
         return result
@@ -142,15 +184,24 @@ class DigitalWorld():
         return method.hasSubtask
 
     def update(self, primitive):
-        print("update", primitive.is_a[0].hasEffect)
-        task = primitive.is_a[0].name
+        effects = primitive.is_a[0].INDIRECT_hasEffect
         print("update", primitive.__dict__)
         if primitive.actsOn:
-            target = primitive.actsOn
+            target = self.onto.search_one(iri =primitive.actsOn.iri)
         self.onto.panda.isWaitingForSomething = False
-        for effect in primitive.is_a[0].hasEffect:
-            print(self.onto.search_one(type = self.onto[effect.name]))
-            self.onto.search_one(type = self.onto[effect.name]).apply(target)
+        for effect in effects:
+            e = self.onto.search_one(iri = effect.iri)
+            print(e)
+            if not e in self.onto.individuals():
+                print("update while create instance")
+                e = e()
+                for x in e.INDIRECT_get_properties():
+                    print("{} -- {}".format(e, getattr(e, x.name)))
+                e.subject = target
+                e.apply()
+            else:
+                print("update", e)
+                e.apply(target)
         '''
         if task == "IdleTask":
             pass

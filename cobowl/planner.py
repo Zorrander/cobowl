@@ -50,20 +50,13 @@ class Planner():
             print("Propagate anchoring errror - {}".format(e.objects))
             raise
 
-    def create_plan(self, command=None, root_task=None):
+    def create_plan(self, root_task=None):
         try:
             final_plan = list()
-            if command:
-                self.world.send_command(command[0], command[1])  # generate a goal
             planning_world = self.world.clone()
             tasks_to_process = planning_world.root_task if not root_task else root_task
             final_plan = self.search(final_plan, tasks_to_process, planning_world)
-            goal = planning_world.onto.search_one(type = planning_world.onto.Command)
-            print(goal.__dict__)
-            goal = goal.has_goal
-            print("PLAN: {}".format(final_plan))
-            print("GOAL: {}".format(goal))
-            return final_plan, goal
+            return final_plan
         except AnchoringError as e:
             print("Propagate anchoring errror - {}".format(e.objects))
             raise
@@ -72,15 +65,16 @@ class Planner():
 
     def run(self, plan, goal_state = False):
         print("RUN:")
+        print("PLAN: {}".format(plan))
         print("GOAL IS: {}".format(goal_state))
         #while plan and not world.check_state(goal_state):
         while plan:
             primitive = plan.pop(0)
+            print("RUUUUUUUN")
             if self.world.are_preconditions_met(primitive):
-                yield primitive
                 print("Primitive has effects: {}".format(primitive.hasEffect))
-                if self.world.compare_goal(goal_state):
-                    print("GOAL WAS REACHED")
-                    self.world.dismiss_command()
+                print("RUNNING")
+                yield primitive
             else:
+                print("WHAAT SOMETHNG WENT WRONG")
                 raise DispatchingError(primitive)

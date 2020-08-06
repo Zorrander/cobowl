@@ -61,6 +61,10 @@ class MethodInterface():
                     task = task()
                     print("[Method builder] creating subtask {}".format(task))
                     task.actsOn = anchored_objects
+                    if not 'is_stored' in anchored_objects.__dict__ or ('is_stored' in anchored_objects.__dict__ and anchored_objects.is_stored):
+                        task.has_place_goal.extend([onto.storage])
+                    else:
+                        task.has_place_goal.extend([onto.handover])
                     return [task]
 
                 def create(self):
@@ -213,19 +217,18 @@ class MethodInterface():
     def _create_normal_method(self, type, current_task):
         properties = ['actsOn', 'has_place_goal']
         method = self.onto[type.name]()
-        for target in current_task.actsOn:
-            for task in type.hasSubtask:
-                new_instance=self.onto[task.name]()
-                new_instance.actsOn.append(target)
-                if current_task.has_place_goal:
-                    print("propagate")
-                    print(method.hasSubtask)
-                    if new_instance.is_a[0].name == "LiftingTask":
-                        new_instance.has_place_goal = [self.onto.handover]
-                    else:
-                        new_instance.has_place_goal = current_task.has_place_goal
-                print("NEW SUBTASK CLASSICAL WAY : {}".format(new_instance.__dict__))
-                method.hasSubtask.append(new_instance)
+        for task in type.hasSubtask:
+            new_instance=self.onto[task.name]()
+            new_instance.actsOn = current_task.actsOn
+            if current_task.has_place_goal:
+                print("propagate")
+                print(method.hasSubtask)
+                if new_instance.is_a[0].name == "LiftingTask":
+                    new_instance.has_place_goal = [self.onto.handover]
+                else:
+                    new_instance.has_place_goal = current_task.has_place_goal
+            print("NEW SUBTASK CLASSICAL WAY : {}".format(new_instance.__dict__))
+            method.hasSubtask.append(new_instance)
         print("EFFECTS...........")
         print("{}".format(method.INDIRECT_hasEffect))
         if method.INDIRECT_hasEffect:

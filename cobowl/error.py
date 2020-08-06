@@ -4,6 +4,7 @@ class AnchoringError(Exception):
 
 class GroundingError(Exception):
    def __init__(self, command):
+      self.object = command
       self.message = "Could not understand {}".format(command)
 
 class DispatchingError(Exception):

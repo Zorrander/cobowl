@@ -20,14 +20,22 @@ class RobotPrompt(Cmd):
         op = self.robot.reset_operator()
         op()
 
+    def do_status(self, arg):
+        'Stop recording, close the turtle window, and exit:  BYE'
+        print(self.robot.status())
+
     def do_command(self, arg):
         args = self.parse(arg)
         if len(args) == 2:
-            self.robot.run(args)
+            self.robot.send_command(args)
+
+    def do_start(self, arg):
+        'Stop recording, close the turtle window, and exit:  BYE'
+        self.robot.start()
 
     def do_bye(self, arg):
         'Stop recording, close the turtle window, and exit:  BYE'
-        print('Done.')
+        self.robot.stop()
         return True
 
     def parse(self, arg):

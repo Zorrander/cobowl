@@ -1,4 +1,6 @@
 import abc
+import time
+import threading
 from .world import *
 from .planner import *
 
@@ -45,6 +47,13 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
     def reload_knowledge(self):
         self.world = DigitalWorld(base=self.knowledge_base_path)
         self.planner = Planner(self.world)
+        self.world.add_object("peg")
+
+
+    def status(self):
+        robot = self.world.onto.panda
+        current_status = [(prop.name, getattr(robot, prop.name)) for prop in robot.INDIRECT_get_properties()]
+        return current_status
 
     def execute(self, command):
         try:
@@ -58,15 +67,17 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def run(self, command = None):
         try:
-            self.send_command(command)
-            plan, goal = self.planner.create_plan()
+            goal = self.send_command(command)
+            plan = self.planner.create_plan()
             while True:
                 for action in self.planner.run(plan, goal):
                     self.perform(action)
                 if self.world.compare_goal(goal):
+                    print("GOAL {} WAS REACHED".format(goal))
+                    self.world.dismiss_command()
                     break
                 else:
-                    plan, _ = self.planner.create_plan()
+                    plan = self.planner.create_plan()
         except AnchoringError as e:
             print("Propagate anchoring errror - {}".format(e.objects))
             self.handle_anchoring_error(e.objects)
@@ -78,20 +89,35 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
     def production_mode(self):
         ''' TODO: Enter idling mode automatically '''
         try:
+            self.killed = False
+            print("Robot up and running! You can send commands. \n")
             while True:
-                plan, goal = self.planner.create_plan()
-                for action in self.planner.run(plan, goal):
-                    self.perform(action)
-                if self.world.compare_goal(goal):
-                    break
+                goal = self.world.fetch_unsatisfied_command()
+                if goal:
+                    plan = self.planner.create_plan()
+                    for action in self.planner.run(plan, goal):
+                        self.perform(action)
+                    if self.world.compare_goal(goal):
+                        print("GOAL {} WAS REACHED".format(goal))
+                        self.world.dismiss_command()
                 else:
-                    plan, _ = self.planner.create_plan()
+                    time.sleep(1)
+                if self.killed:
+                    break
         except AnchoringError as e:
             print("Propagate anchoring errror - {}".format(e.objects))
             self.handle_anchoring_error(e.objects)
         except DispatchingError as e:
             print("Dispatching Error: {}".format(e.primitive))
-            self.production_mode()
+            # self.production_mode()
+
+    def start(self):
+        run = threading.Thread(target=self.production_mode)
+        run.start()
+
+    def stop(self):
+        print('Done.')
+        self.killed = True
 
     def perform(self, primitive):
         operator = self._get_operator(primitive)
@@ -120,6 +146,11 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def handle_anchoring_error(self, object):
+        """Robot enters waiting state"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def handle_grounding_error(self, object):
         """Robot enters waiting state"""
         raise NotImplementedError
 
@@ -191,9 +222,12 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
         print("{} completed".format(task))
 
     def send_command(self, command):
-        action = command[0]
-        target = command[1]
-        self.world.send_command(action, target)
+        try:
+            action = command[0]
+            target = command[1]
+            return self.world.send_command(action, target)
+        except error.GroundingError as e:
+            self.handle_grounding_error(e.object)
 
     def move_operator(self, target):
         def move_to():
@@ -223,8 +257,12 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
     def reset_operator(self):
         def reset():
             print("Reseting...")
+            self.stop()
+            self.reload_knowledge()
         return reset
 
     def handle_anchoring_error(self, object):
-        print("REACH FINAL STAGE OF ERROR")
         print("COULD NOT ANCHOR", object)
+
+    def handle_grounding_error(self, object):
+        print("COULD NOT GROUND", object)

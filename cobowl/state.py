@@ -6,24 +6,29 @@ class StateInterface():
         self.onto = onto
         with onto:
             class State(Thing):
-                def evaluate(self, target):
-                    print("Evaluating {}".format(target))
-                    print(self.subject.INDIRECT_get_properties())
+                def evaluate(self, target = None):
+                    subject = onto.search_one(iri =self.subject.iri)
+                    print("Evaluating {}({})".format(self, target))
+                    print(subject.INDIRECT_get_properties())
                     print(self.INDIRECT_get_properties())
-                    for subject_prop in self.subject.INDIRECT_get_properties():
-                        for effect_prop in self.INDIRECT_get_properties():
-                            if subject_prop == effect_prop:
-                                print(getattr(self, subject_prop.name))
-                                print(getattr(self.subject, subject_prop.name))
-                                print("Returning {}".format(getattr(self, subject_prop.name) == getattr(self.subject, subject_prop.name)))
-                                return getattr(self, subject_prop.name) == getattr(self.subject, subject_prop.name)
+                    for effect_prop in self.INDIRECT_get_properties():
+                        if effect_prop in subject.INDIRECT_get_properties():
+                            print(getattr(self, 'INDIRECT_'+effect_prop.name))
+                            print(getattr(subject, 'INDIRECT_'+effect_prop.name))
+                            print("{} is {}".format(self, getattr(self, 'INDIRECT_'+effect_prop.name) == getattr(subject, 'INDIRECT_'+effect_prop.name)))
+                            return getattr(self, 'INDIRECT_'+effect_prop.name) == getattr(subject, 'INDIRECT_'+effect_prop.name)
+                        else:
+                            print("DENIED")
 
-                def apply(self, target):
-                    for subject_prop in self.subject.INDIRECT_get_properties():
-                        for effect_prop in self.INDIRECT_get_properties():
-                            if subject_prop == effect_prop:
-                                new_value = getattr(self, effect_prop.name)
-                                setattr(self.subject, subject_prop.name, new_value)
+                def apply(self, target = None):
+                    print("SETTING NEW VALUE FOR")
+                    for effect_prop in self.INDIRECT_get_properties():
+                        if not effect_prop.name == 'subject':
+                            #if effect_prop in self.subject.INDIRECT_get_properties():
+                            print("SETTING NEW VALUE FOR")
+                            new_value = getattr(self, 'INDIRECT_'+effect_prop.name)
+                            print("{}.{} -> {}".format(self.subject, effect_prop.name, new_value))
+                            setattr(self.subject, effect_prop.name, new_value)
 
     def evaluate(self, state, target):
 
