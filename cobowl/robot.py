@@ -49,6 +49,8 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
         self.planner = Planner(self.world)
         self.world.add_object("peg")
 
+    def load(self, jsonld_triples):
+        self.world.add(jsonld_triples)        
 
     def status(self):
         robot = self.world.onto.panda

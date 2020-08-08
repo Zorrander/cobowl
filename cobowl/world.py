@@ -39,6 +39,49 @@ class DigitalWorld():
         self.onto.save(file = str(Path.home() / 'cobot_logs' / 'plan.owl'), format = "rdfxml")
         return DigitalWorld(original_world=True)
 
+    def is_a_functional_property(self, prop):
+        for mother_class in prop.is_a:
+            if mother_class.name == "FunctionalProperty":
+                return True
+        return False
+
+    def add(self, triple_list):
+        buffer_list = []
+        subjects_dict = {}
+        for subject, predicate, obj in triple_list:
+            print(subjects_dict)
+            if not self.onto[subject] and predicate=='type':
+                self.onto[obj](subject)
+            else:
+                if not subject in subjects_dict.keys():
+                    subjects_dict[subject] = {predicate: obj}
+                else:
+                    subjects_dict[subject].update({predicate: obj})
+        print("sorted")
+        print(subjects_dict)
+
+        for individual in subjects_dict.keys():
+            for prop, value in subjects_dict[individual].items():
+                print("{} >> {} >> {}".format(individual, prop, value))
+                print("{} >> {} >> {}".format(self.onto[individual] ,self.onto[prop], self.onto[value]))
+                if self.is_a_functional_property(self.onto[prop]):
+                    print("functional")
+                    if self.onto[prop] in self.onto.individuals():
+                        setattr(self.onto[individual], prop, self.onto[value])
+                        print("added", self.onto[individual], prop, value)
+                    else:
+                        val = self.onto[value]()
+                        setattr(self.onto[individual], prop, self.onto[val])
+                        print("added and created", self.onto[individual], prop, val)
+                else:
+                    print("not functional")
+                    val = getattr(self.onto[individual], prop) + [self.onto[value]]
+                    print(val)
+                    setattr(self.onto[individual], prop,  val)
+                    print("added", self.onto[individual], prop, val)
+        if buffer_list:
+            self.add(buffer_list)
+
     def add_object(self, name):
         with self.onto:
             obj = self.workspace.add_object(name)
