@@ -13,7 +13,7 @@ class MethodInterface():
             class Command(Thing):
                 @classmethod
                 def get_trigger_word(cls):
-                    return cls.triggered_by
+                    return cls.is_triggered_by
 
                 @classmethod
                 def get_triggered_task(cls):
@@ -29,8 +29,7 @@ class MethodInterface():
 
             class Signal(Command): pass
 
-            class is_triggered_by(Command >> str, FunctionalProperty):
-                python_name = "triggered_by"
+            class is_triggered_by(Command >> str, FunctionalProperty):pass
 
             class triggers(Command >> Task, FunctionalProperty):
                 python_name = "triggers"

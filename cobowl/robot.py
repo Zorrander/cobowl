@@ -49,9 +49,6 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
         self.planner = Planner(self.world)
         self.world.add_object("peg")
 
-    def load(self, jsonld_triples):
-        self.world.add(jsonld_triples)        
-
     def status(self):
         robot = self.world.onto.panda
         current_status = [(prop.name, getattr(robot, prop.name)) for prop in robot.INDIRECT_get_properties()]
@@ -227,6 +224,8 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
         try:
             action = command[0]
             target = command[1]
+            print("send", action, target)
+            time.sleep(2)
             return self.world.send_command(action, target)
         except error.GroundingError as e:
             self.handle_grounding_error(e.object)

@@ -1,6 +1,10 @@
 from owlready2 import *
 from pathlib import Path
 from . import state, workspace, method, error
+import json
+import types
+import time
+from pyld import jsonld
 
 class DigitalWorld():
     def __init__(self, original_world=None, root_task=None, base=None):
@@ -20,7 +24,7 @@ class DigitalWorld():
         directory = Path(folder_path)
         for f in directory.iterdir():
             print("- Found: {}".format(f.name))
-            self.world.get_ontology(str(directory / f)).load()
+            self.json2owl(f)
 
     def dismiss_command(self):
         cmd = self.onto.search_one(type = self.onto.Command)
@@ -45,13 +49,41 @@ class DigitalWorld():
                 return True
         return False
 
+    def strip_iri(self, iri):
+        print("IRI", iri.split("#")[1][:-1])
+        return iri.split("#")[1][:-1]
+
+    def strip_triple(self, triple):
+        new_triple = []
+        for iri in triple:
+            new_triple.append(self.strip_iri(iri))
+        return new_triple
+
+    def json2owl(self, file_to_read):
+        with file_to_read.open() as infile:
+            knowledge = json.loads(infile.read())
+        normalized = jsonld.normalize(knowledge, {'algorithm': 'URDNA2015', 'format': 'application/nquads'})
+
+        triples = normalized.replace("\n", " ").split(' . ')
+        result = []
+        for triple in triples[:-1]:
+            result.append(self.strip_triple(triple.split()))
+        print("result")
+        print(result)
+        self.add(result)
+
     def add(self, triple_list):
         buffer_list = []
         subjects_dict = {}
         for subject, predicate, obj in triple_list:
             print(subjects_dict)
             if not self.onto[subject] and predicate=='type':
-                self.onto[obj](subject)
+                print("Created")
+                # types.new_class(subject, (self.onto[obj],), kwds = { "namespace" : self.onto })
+                types.new_class(subject, (self.onto[obj],))
+                # self.onto[obj](subject)
+                print(self.onto[subject].__dict__)
+                print(self.onto["PickCommand"].__dict__)
             else:
                 if not subject in subjects_dict.keys():
                     subjects_dict[subject] = {predicate: obj}
@@ -67,12 +99,20 @@ class DigitalWorld():
                 if self.is_a_functional_property(self.onto[prop]):
                     print("functional")
                     if self.onto[prop] in self.onto.individuals():
-                        setattr(self.onto[individual], prop, self.onto[value])
-                        print("added", self.onto[individual], prop, value)
+                        if self.onto[value]:
+                            setattr(self.onto[individual], prop, self.onto[value])
+                            print("added with value ind", self.onto[individual], prop, value)
+                        else:
+                            setattr(self.onto[individual], prop, value)
+                            print("added", self.onto[individual], prop, value)
+                            print("res", getattr(self.onto[individual], prop) )
                     else:
-                        val = self.onto[value]()
-                        setattr(self.onto[individual], prop, self.onto[val])
-                        print("added and created", self.onto[individual], prop, val)
+                        # val = self.onto[value]()
+                        if self.onto[value]:
+                            setattr(self.onto[individual], prop, self.onto[value])
+                        else:
+                            setattr(self.onto[individual], prop, value)
+                        print("added and created", self.onto[individual], prop, value)
                 else:
                     print("not functional")
                     val = getattr(self.onto[individual], prop) + [self.onto[value]]
@@ -88,8 +128,14 @@ class DigitalWorld():
             return obj
 
     def fetch_available_commands(self):
-        objects = self.onto.Command.instances()
-        return [obj.get_trigger_word() for obj in objects if obj.get_trigger_word()]
+        print("fetch_available_commands")
+        return [x.is_triggered_by for x in self.onto.search(is_a = self.onto.Command) if x.is_triggered_by]
+
+    def retrieve_tasks(self):
+        return [x.name for x in self.onto.search(is_a = self.onto.Task)]
+
+    def retrieve_goals(self):
+        return [x.name for x in self.onto.search(type = self.onto.State)]
 
     def fetch_unsatisfied_command(self):
         cmd = self.onto.Command.instances()

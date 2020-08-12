@@ -1,17 +1,15 @@
 import unittest
-import os.path
-from os.path import expanduser
 from cmd import Cmd
+from pathlib import Path
+
 from cobowl import robot
 
-home = expanduser("~")
-
-# RESOURCE_PATH  = os.path.join(home, "ros2_ws", "src", "tuni-semweb", "cobot_knowledge", "resource", "database")
-RESOURCE_PATH  = os.path.join(home, "tuni-semweb", "cobot_knowledge", "resource", "database")
+KB_PATH = str(Path.home() / "semantic_kb" / "system" / "handover.owl")
+USER_KB = str(Path.home() / "semantic_kb" / "user")
 
 class RobotPrompt(Cmd):
 
-    robot = robot.VirtualCollaborativeRobot(os.path.join(RESOURCE_PATH, 'handover.owl'), os.path.join(RESOURCE_PATH, 'user_defined'))
+    robot = robot.VirtualCollaborativeRobot(KB_PATH, USER_KB)
     prompt = '(panda) '
     intro = 'Type help or ? to list commands.\n'
 
@@ -28,6 +26,13 @@ class RobotPrompt(Cmd):
         args = self.parse(arg)
         if len(args) == 2:
             self.robot.send_command(args)
+
+    def do_run(self, arg):
+        'Stop recording, close the turtle window, and exit:  BYE'
+        self.robot.start()
+        args = self.parse(arg)
+        if len(args) == 2:
+            self.robot.run(command = args)
 
     def do_start(self, arg):
         'Stop recording, close the turtle window, and exit:  BYE'
