@@ -2,6 +2,7 @@ from owlready2 import *
 from .state import *
 import copy
 from .error import *
+import time
 
 class MethodInterface():
 
@@ -53,17 +54,34 @@ class MethodInterface():
                     except Exception as e:
                         print(e)
 
+            class Task(Thing):
+                def calculate_target_pose(self, target):
+                    try:
+                        print(target.__dict__)
+                        print("[Method builder] creating subtask {}".format(self.INDIRECT_get_properties()))
+                        print("[Method builder] creating subtask {}".format(self.INDIRECT_has_path_goal))
+                        print("[Method builder] creating subtask {}".format(self.INDIRECT_has_place_goal))
+                        self.actsOn = target
+                        if not self.INDIRECT_has_place_goal:
+                            if not 'is_stored' in target.__dict__ or ('is_stored' in target.__dict__ and target.is_stored):
+                                self.has_place_goal.extend([onto.storage])
+                            else:
+                                self.has_place_goal.extend([onto.handover])
+                        else:
+                            self.has_place_goal = self.INDIRECT_has_place_goal
+                        print("[Method builder] creating subtask >>>>>>>>>>>RESULT {}".format(self.has_place_goal))
+
+                    except Exception as e:
+                        print(e)
+
             class CommandMethod(Method):
 
                 def init_subtasks(self, cmd, anchored_objects):
                     task = cmd.get_triggered_task()
                     task = task()
                     print("[Method builder] creating subtask {}".format(task))
-                    task.actsOn = anchored_objects
-                    if not 'is_stored' in anchored_objects.__dict__ or ('is_stored' in anchored_objects.__dict__ and anchored_objects.is_stored):
-                        task.has_place_goal.extend([onto.storage])
-                    else:
-                        task.has_place_goal.extend([onto.handover])
+                    task.calculate_target_pose(anchored_objects)
+                    time.sleep(3)
                     return [task]
 
                 def create(self):
