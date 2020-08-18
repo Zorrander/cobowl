@@ -3,12 +3,13 @@ import time
 import threading
 from .world import *
 from .planner import *
-
+import speech_recognition as sr
 
 class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
 
     def __init__(self, knowledge_base_path, user_folder):
         print("Loading knowledge base")
+        self.killed = False
         self.knowledge_base_path = knowledge_base_path
         self.world = DigitalWorld(base=knowledge_base_path)
         print("Loading user defined concepts")
@@ -88,7 +89,6 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
     def production_mode(self):
         ''' TODO: Enter idling mode automatically '''
         try:
-            self.killed = False
             print("Robot up and running! You can send commands. \n")
             while True:
                 goal = self.world.fetch_unsatisfied_command()
@@ -109,6 +109,33 @@ class CollaborativeRobotInterface(metaclass=abc.ABCMeta):
         except DispatchingError as e:
             print("Dispatching Error: {}".format(e.primitive))
             # self.production_mode()
+
+    def sphinx_callback(self, recognizer, audio):
+        # recognize speech using Sphinx
+        try:
+            print("Think")
+            # print("Sphinx thinks you said " + recognizer.recognize_sphinx(audio, grammar=path.join(path.dirname(path.realpath(__file__)), 'counting.gram')))
+            cmd = recognizer.recognize_sphinx(audio, keyword_entries=[("give", 1.0), ("reach", 1.0), ("grasp", 1.0), ("release", 1.0), ("peg", 1.0)])
+            bow = cmd.strip().split(' ')
+            print(bow)
+            if len(bow) == 3:
+                print("Sphinx thinks you said [{} - {}]".format(bow[2], bow[0]))
+                self.run(command=(bow[2], bow[0]))
+
+        except sr.UnknownValueError:
+            print("Sphinx could not understand audio")
+        except sr.RequestError as e:
+            print("Sphinx error; {0}".format(e))
+        print("Say something")
+
+    def start_listening(self):
+        r = sr.Recognizer()
+        m = sr.Microphone(device_index=8)
+        with m as source:
+            r.adjust_for_ambient_noise(source, duration=2)
+            print("say something!")
+            audio = r.listen(m)
+            self.sphinx_callback(r, audio)
 
     def start(self):
         run = threading.Thread(target=self.production_mode)
