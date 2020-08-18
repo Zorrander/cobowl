@@ -225,7 +225,6 @@ class VirtualCollaborativeRobot(CollaborativeRobotInterface):
             action = command[0]
             target = command[1]
             print("send", action, target)
-            time.sleep(2)
             return self.world.send_command(action, target)
         except error.GroundingError as e:
             self.handle_grounding_error(e.object)

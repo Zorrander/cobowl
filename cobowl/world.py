@@ -8,6 +8,7 @@ from pyld import jsonld
 
 class DigitalWorld():
     def __init__(self, original_world=None, root_task=None, base=None):
+        self._observers = []
         self.world = World()
         self.onto = self.world.get_ontology(str(Path.home()/'cobot_logs'/'plan.owl')).load() if original_world else self.world.get_ontology(base).load()
         if original_world:
@@ -18,6 +19,25 @@ class DigitalWorld():
         self.method_interface = method.MethodInterface(self.onto)
         self.state_interface = state.StateInterface(self.onto)
         self.root_task = list(root_task) if root_task else [self.onto.be]
+
+    def attach(self, observer):
+        print("Subject: Attached an observer.")
+        self._observers.append(observer)
+
+    def detach(self, observer):
+        self._observers.remove(observer)
+
+    def notify(self):
+        """
+        Trigger an update in each subscriber.
+        """
+        print("Subject: Notifying observers...")
+        for observer in self._observers:
+            observer.update(self)
+
+    def set(self, subj, prop, obj):
+        setattr(subj, prop, obj)
+        self.notify()
 
     def load_user_knowledge(self, folder_path):
         print("Exploring {}...".format(folder_path))
@@ -238,7 +258,7 @@ class DigitalWorld():
         conditions = primitive.INDIRECT_hasCondition
         #conditions = conditions + primitive.is_a[0].INDIRECT_hasCondition
         for cond in conditions:
-            print(cond)
+            print("IRI COND", cond)
             print(cond.__dict__)
             cond = self.onto.search_one(iri =cond.iri)
             print("Found conditions: {} over {}".format(cond, primitive.actsOn))
@@ -249,7 +269,7 @@ class DigitalWorld():
                 print("update while create instance")
                 cond = cond()
                 for x in cond.INDIRECT_get_properties():
-                    print("{} -- {}".format(cond, getattr(cond, x.name)))
+                    print("{} -- ".format(cond))
                 cond.subject = primitive.actsOn
             if not cond.evaluate(primitive.actsOn):
                 print("OOPS RETURNING FALSE")
@@ -273,7 +293,7 @@ class DigitalWorld():
         return method.hasSubtask
 
     def update(self, primitive):
-        effects = primitive.is_a[0].INDIRECT_hasEffect
+        effects = primitive.is_a[0].INDIRECT_hasEffect + primitive.hasEffect  # Takes into account effects passed on from methods
         print("update", primitive.__dict__)
         if primitive.actsOn:
             target = self.onto.search_one(iri =primitive.actsOn.iri)

@@ -62,15 +62,19 @@ class MethodInterface():
                         print("[Method builder] creating subtask {}".format(self.INDIRECT_has_path_goal))
                         print("[Method builder] creating subtask {}".format(self.INDIRECT_has_place_goal))
                         self.actsOn = target
+                        print("EVALUATING POSE TARGET")
                         if not self.INDIRECT_has_place_goal:
-                            if not 'is_stored' in target.__dict__ or ('is_stored' in target.__dict__ and target.is_stored):
+                            print(target.INDIRECT_get_properties())
+                            if not onto.is_stored in target.INDIRECT_get_properties() or (onto.is_stored in target.INDIRECT_get_properties() and target.is_stored):
+                                print("storage")
                                 self.has_place_goal.extend([onto.storage])
                             else:
+                                print("handover")
                                 self.has_place_goal.extend([onto.handover])
                         else:
+                            print("had already place gola", self.INDIRECT_has_place_goal)
                             self.has_place_goal = self.INDIRECT_has_place_goal
                         print("[Method builder] creating subtask >>>>>>>>>>>RESULT {}".format(self.has_place_goal))
-
                     except Exception as e:
                         print(e)
 
@@ -81,7 +85,6 @@ class MethodInterface():
                     task = task()
                     print("[Method builder] creating subtask {}".format(task))
                     task.calculate_target_pose(anchored_objects)
-                    time.sleep(3)
                     return [task]
 
                 def create(self):
@@ -237,14 +240,22 @@ class MethodInterface():
         for task in type.hasSubtask:
             new_instance=self.onto[task.name]()
             new_instance.actsOn = current_task.actsOn
-            if current_task.has_place_goal:
-                print("propagate")
+
+            if new_instance.INDIRECT_has_place_goal:
+                '''
                 print(method.hasSubtask)
                 if new_instance.is_a[0].name == "LiftingTask":
                     new_instance.has_place_goal = [self.onto.handover]
                 else:
                     new_instance.has_place_goal = current_task.has_place_goal
-            print("NEW SUBTASK CLASSICAL WAY : {}".format(new_instance.__dict__))
+                '''
+                print("propagate")
+                new_instance.has_place_goal = new_instance.INDIRECT_has_place_goal
+                print("Instance of", task.name)
+                print(new_instance.has_place_goal)
+            elif current_task.INDIRECT_has_place_goal:
+                new_instance.has_place_goal = current_task.INDIRECT_has_place_goal
+            print("NEW SUBTASK CLASSICAL WAY : {}".format(new_instance.INDIRECT_get_properties()))
             method.hasSubtask.append(new_instance)
         print("EFFECTS...........")
         print("{}".format(method.INDIRECT_hasEffect))

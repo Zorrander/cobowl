@@ -9,6 +9,5 @@ class CollaborativeWorkspace():
 
     def add_object(self, name):
         object = self.sem_obj_interface.create(name)
-        object.is_stored = True
         self.onto.cobot_workspace.contains.append(object)
         return object

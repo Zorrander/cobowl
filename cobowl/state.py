@@ -7,6 +7,7 @@ class StateInterface():
         with onto:
             class State(Thing):
                 def evaluate(self, target = None):
+                    print("STATE evaluate()", self.subject.__dict__)
                     subject = onto.search_one(iri =self.subject.iri)
                     print("Evaluating {}({})".format(self, target))
                     print(subject.INDIRECT_get_properties())
